@@ -1,0 +1,24 @@
+# Node.js
+node_modules/
+dist/
+
+# Go
+/go/server
+
+# Java
+/java/build/
+/java/.gradle/
+
+# PHP
+/php/vendor/
+
+# Ruby
+/ruby/tmp/
+/ruby/log/
+
+# Rust
+/rust/actix-web/target/
+/rust/axum/target/
+
+# Python
+/python/__pycache__/

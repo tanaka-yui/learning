@@ -1,0 +1,132 @@
+services:
+  ts-server:
+    build:
+      context: ./typescript
+    ports:
+      - "3000:3000"
+    environment:
+      - HEAVY_CALC_N=${HEAVY_CALC_N:-43}
+
+  go-server:
+    build:
+      context: ./go
+    ports:
+      - "8081:8080"
+    environment:
+      - HEAVY_CALC_N=${HEAVY_CALC_N:-43}
+
+  go-server-single:
+    build:
+      context: ./go
+    ports:
+      - "8082:8080"
+    environment:
+      - HEAVY_CALC_N=${HEAVY_CALC_N_GO_SINGLE:-45}
+      - GOMAXPROCS=1
+
+  java-server:
+    build:
+      context: ./java
+    ports:
+      - "8083:8081"
+    environment:
+      - HEAVY_CALC_N=${HEAVY_CALC_N:-43}
+
+  java-server-single:
+    build:
+      context: ./java
+    ports:
+      - "8084:8081"
+    environment:
+      - HEAVY_CALC_N=${HEAVY_CALC_N:-43}
+      - SERVER_TOMCAT_THREADS_MAX=1
+
+  php-server:
+    build:
+      context: ./php
+    ports:
+      - "8085:8080"
+    environment:
+      - HEAVY_CALC_N=${HEAVY_CALC_N_PHP:-38}
+      - PHP_FPM_WORKERS=4
+
+  php-server-single:
+    build:
+      context: ./php
+    ports:
+      - "8086:8080"
+    environment:
+      - HEAVY_CALC_N=${HEAVY_CALC_N_PHP:-38}
+      - PHP_FPM_WORKERS=1
+
+  ruby-server:
+    build:
+      context: ./ruby
+    ports:
+      - "8087:8080"
+    environment:
+      - HEAVY_CALC_N=${HEAVY_CALC_N_RUBY:-40}
+      - WEB_CONCURRENCY=4
+
+  ruby-server-single:
+    build:
+      context: ./ruby
+    ports:
+      - "8088:8080"
+    environment:
+      - HEAVY_CALC_N=${HEAVY_CALC_N_RUBY:-40}
+      - WEB_CONCURRENCY=1
+
+  rust-server:
+    build:
+      context: ./rust/actix-web
+    ports:
+      - "8089:8080"
+    environment:
+      - HEAVY_CALC_N=${HEAVY_CALC_N:-43}
+      - ACTIX_WORKERS=4
+
+  rust-server-single:
+    build:
+      context: ./rust/actix-web
+    ports:
+      - "8090:8080"
+    environment:
+      - HEAVY_CALC_N=${HEAVY_CALC_N:-43}
+      - ACTIX_WORKERS=1
+
+  rust-axum-server:
+    build:
+      context: ./rust/axum
+    ports:
+      - "8091:8080"
+    environment:
+      - HEAVY_CALC_N=${HEAVY_CALC_N:-43}
+      - TOKIO_WORKERS=4
+
+  rust-axum-server-single:
+    build:
+      context: ./rust/axum
+    ports:
+      - "8092:8080"
+    environment:
+      - HEAVY_CALC_N=${HEAVY_CALC_N:-43}
+      - TOKIO_WORKERS=1
+
+  python-server:
+    build:
+      context: ./python
+    ports:
+      - "8093:8080"
+    environment:
+      - HEAVY_CALC_N=${HEAVY_CALC_N_PYTHON:-38}
+      - UVICORN_WORKERS=4
+
+  python-server-single:
+    build:
+      context: ./python
+    ports:
+      - "8094:8080"
+    environment:
+      - HEAVY_CALC_N=${HEAVY_CALC_N_PYTHON:-38}
+      - UVICORN_WORKERS=1

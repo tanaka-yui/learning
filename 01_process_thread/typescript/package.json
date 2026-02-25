@@ -1,0 +1,19 @@
+{
+  "name": "process-thread-ts",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "fastify": "^5.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "fastify-tsconfig": "^3.0.0"
+  },
+  "packageManager": "pnpm@10.27.0"
+}

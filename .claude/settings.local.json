@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "WebSearch",
+      "WebFetch(domain:fastify.dev)",
+      "WebFetch(domain:github.com)",
+      "Bash(cd:*)",
+      "Bash(git commit:*)",
+      "Bash(git reset:*)",
+      "Bash(git:*)",
+      "Bash(/bin/chmod +x:*)",
+      "Bash(docker compose:*)",
+      "Bash(curl:*)",
+      "Bash(head:*)",
+      "Bash(ps:*)",
+      "Bash(echo *)",
+      "Bash(sleep *)",
+      "Bash(docker run:*)",
+      "Bash(./scripts/load-test.sh *)",
+      "Bash(docker ps:*)"
+    ]
+  }
+}
