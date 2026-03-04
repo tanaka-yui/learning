@@ -1,0 +1,69 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: process-thread-ingress
+  namespace: process-thread
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /go(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: go-server
+                port:
+                  number: 80
+          - path: /ts(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ts-server
+                port:
+                  number: 80
+          - path: /java(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: java-server
+                port:
+                  number: 80
+          - path: /php(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: php-server
+                port:
+                  number: 80
+          - path: /ruby(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ruby-server
+                port:
+                  number: 80
+          - path: /rust-actix(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: rust-actix-server
+                port:
+                  number: 80
+          - path: /rust-axum(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: rust-axum-server
+                port:
+                  number: 80
+          - path: /python(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: python-server
+                port:
+                  number: 80

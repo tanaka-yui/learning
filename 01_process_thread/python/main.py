@@ -2,7 +2,7 @@ import os
 import time
 from datetime import datetime, timezone
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query as QueryParam
 from fastapi.responses import JSONResponse
 
 app = FastAPI()
@@ -27,11 +27,12 @@ async def health() -> JSONResponse:
 
 
 @app.get("/heavy")
-async def heavy() -> JSONResponse:
+async def heavy(n: int | None = QueryParam(default=None)) -> JSONResponse:
+    calc_n = n if n is not None else HEAVY_CALC_N
     started_at = utc_now_iso()
     start = time.monotonic()
 
-    fibonacci(HEAVY_CALC_N)
+    fibonacci(calc_n)
 
     duration_ms = round((time.monotonic() - start) * 1000)
     finished_at = utc_now_iso()

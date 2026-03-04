@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ts-server
+  namespace: process-thread
+  labels:
+    app: ts-server
+    language: typescript
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ts-server
+  template:
+    metadata:
+      labels:
+        app: ts-server
+        language: typescript
+    spec:
+      containers:
+        - name: ts-server
+          image: pt-typescript:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 3000
+          env:
+            - name: HEAVY_CALC_N
+              value: "43"
+          resources:
+            requests:
+              cpu: "1"
+              memory: "128Mi"
+            limits:
+              cpu: "1"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 3
+            periodSeconds: 5

@@ -13,11 +13,13 @@ server.get("/health", async () => {
   return { status: "ok", language: "typescript" };
 });
 
-server.get("/heavy", async () => {
+server.get("/heavy", async (request) => {
+  const n =
+    Number((request.query as Record<string, string>).n) || HEAVY_CALC_N;
   const startedAt = new Date().toISOString();
   const start = performance.now();
 
-  fibonacci(HEAVY_CALC_N);
+  fibonacci(n);
 
   const end = performance.now();
   const finishedAt = new Date().toISOString();

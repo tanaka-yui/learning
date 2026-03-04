@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class HeavyController extends Controller
 {
@@ -30,12 +31,13 @@ class HeavyController extends Controller
         ]);
     }
 
-    public function heavy(): JsonResponse
+    public function heavy(Request $request): JsonResponse
     {
+        $n = $request->query('n') !== null ? (int) $request->query('n') : $this->heavyCalcN;
         $startedAt = gmdate('Y-m-d\TH:i:s.v\Z');
         $startMs = hrtime(true);
 
-        $this->fibonacci($this->heavyCalcN);
+        $this->fibonacci($n);
 
         $endMs = hrtime(true);
         $finishedAt = gmdate('Y-m-d\TH:i:s.v\Z');

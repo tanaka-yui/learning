@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ruby-server
+  namespace: process-thread
+  labels:
+    app: ruby-server
+    language: ruby
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ruby-server
+  template:
+    metadata:
+      labels:
+        app: ruby-server
+        language: ruby
+    spec:
+      containers:
+        - name: ruby-server
+          image: pt-ruby:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          env:
+            - name: HEAVY_CALC_N
+              value: "43"
+            - name: WEB_CONCURRENCY
+              value: "1"
+          resources:
+            requests:
+              cpu: "1"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5

@@ -6,10 +6,11 @@ class HeavyController < ApplicationController
   end
 
   def heavy
+    n = params[:n].present? ? params[:n].to_i : HEAVY_CALC_N
     started_at = Time.now.utc.strftime("%Y-%m-%dT%H:%M:%S.%3NZ")
     start_ns = Process.clock_gettime(Process::CLOCK_MONOTONIC, :nanosecond)
 
-    fibonacci(HEAVY_CALC_N)
+    fibonacci(n)
 
     end_ns = Process.clock_gettime(Process::CLOCK_MONOTONIC, :nanosecond)
     finished_at = Time.now.utc.strftime("%Y-%m-%dT%H:%M:%S.%3NZ")

@@ -22,3 +22,8 @@ dist/
 
 # Python
 /python/__pycache__/
+
+# k6
+/k6/results/
+
+AI_INSTRUCTIONS.md

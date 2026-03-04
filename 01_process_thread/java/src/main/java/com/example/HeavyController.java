@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -24,11 +25,12 @@ public class HeavyController {
     }
 
     @GetMapping("/heavy")
-    public Map<String, Object> heavy() {
+    public Map<String, Object> heavy(@RequestParam(value = "n", required = false) Integer n) {
+        int calcN = (n != null) ? n : heavyCalcN;
         Instant startedAt = Instant.now();
         long startMs = System.currentTimeMillis();
 
-        fibonacci(heavyCalcN);
+        fibonacci(calcN);
 
         long endMs = System.currentTimeMillis();
         Instant finishedAt = Instant.now();

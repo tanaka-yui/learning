@@ -21,7 +21,7 @@ services:
     ports:
       - "8082:8080"
     environment:
-      - HEAVY_CALC_N=${HEAVY_CALC_N_GO_SINGLE:-45}
+      - HEAVY_CALC_N=${HEAVY_CALC_N:-43}
       - GOMAXPROCS=1
 
   java-server:
@@ -65,7 +65,7 @@ services:
     ports:
       - "8087:8080"
     environment:
-      - HEAVY_CALC_N=${HEAVY_CALC_N_RUBY:-40}
+      - HEAVY_CALC_N=${HEAVY_CALC_N_RUBY:-43}
       - WEB_CONCURRENCY=4
 
   ruby-server-single:
@@ -74,8 +74,9 @@ services:
     ports:
       - "8088:8080"
     environment:
-      - HEAVY_CALC_N=${HEAVY_CALC_N_RUBY:-40}
+      - HEAVY_CALC_N=${HEAVY_CALC_N_RUBY:-43}
       - WEB_CONCURRENCY=1
+      - RUBY_YJIT_ENABLE=1
 
   rust-server:
     build:
@@ -130,3 +131,31 @@ services:
     environment:
       - HEAVY_CALC_N=${HEAVY_CALC_N_PYTHON:-38}
       - UVICORN_WORKERS=1
+
+  k6:
+    image: grafana/k6
+    profiles:
+      - k6
+    ports:
+      - "5665:5665"
+    volumes:
+      - ./k6:/scripts
+    working_dir: /scripts
+    environment:
+      - K6_WEB_DASHBOARD=true
+      - K6_WEB_DASHBOARD_EXPORT=/scripts/results/report.html
+      - BASE_URL=${K6_BASE_URL:-http://go-server:8080}
+      - ENDPOINT=${K6_ENDPOINT:-/heavy}
+      - REQUEST_TIMEOUT=${K6_REQUEST_TIMEOUT:-30s}
+      - TEST_PROFILE=${K6_TEST_PROFILE:-ramping}
+      - TARGET_VUS=${K6_TARGET_VUS:-50}
+      - DURATION=${K6_DURATION:-60s}
+      - RAMP_UP=${K6_RAMP_UP:-30s}
+      - RAMP_DOWN=${K6_RAMP_DOWN:-10s}
+      - MAX_VUS=${K6_MAX_VUS:-200}
+      - SOAK_DURATION=${K6_SOAK_DURATION:-5m}
+      - THRESHOLD_P95=${K6_THRESHOLD_P95:-10000}
+      - THRESHOLD_P99=${K6_THRESHOLD_P99:-15000}
+      - THRESHOLD_TIMEOUT_RATE=${K6_THRESHOLD_TIMEOUT_RATE:-0.1}
+      - THRESHOLD_ERROR_RATE=${K6_THRESHOLD_ERROR_RATE:-0.05}
+    command: ["run", "/scripts/heavy-load.js"]

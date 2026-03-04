@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - ingress.yaml
+  - apps/go/deployment.yaml
+  - apps/go/service.yaml
+  - apps/go/hpa.yaml
+  - apps/typescript/deployment.yaml
+  - apps/typescript/service.yaml
+  - apps/typescript/hpa.yaml
+  - apps/java/deployment.yaml
+  - apps/java/service.yaml
+  - apps/java/hpa.yaml
+  - apps/php/deployment.yaml
+  - apps/php/service.yaml
+  - apps/php/hpa.yaml
+  - apps/ruby/deployment.yaml
+  - apps/ruby/service.yaml
+  - apps/ruby/hpa.yaml
+  - apps/rust-actix/deployment.yaml
+  - apps/rust-actix/service.yaml
+  - apps/rust-actix/hpa.yaml
+  - apps/rust-axum/deployment.yaml
+  - apps/rust-axum/service.yaml
+  - apps/rust-axum/hpa.yaml
+  - apps/python/deployment.yaml
+  - apps/python/service.yaml
+  - apps/python/hpa.yaml

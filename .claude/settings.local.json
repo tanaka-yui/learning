@@ -18,7 +18,16 @@
       "Bash(sleep *)",
       "Bash(docker run:*)",
       "Bash(./scripts/load-test.sh *)",
-      "Bash(docker ps:*)"
+      "Bash(docker ps:*)",
+      "Bash(kubectl:*)",
+      "Bash(make deploy-infra:*)",
+      "Bash(make:*)",
+      "Bash(/usr/bin/make:*)",
+      "Bash(kubectl get:*)",
+      "Bash(docker exec:*)",
+      "Bash(lsof:*)",
+      "Bash(kind delete:*)",
+      "Bash(kind create:*)"
     ]
   }
 }

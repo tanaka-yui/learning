@@ -49,9 +49,16 @@ func main() {
 	})
 
 	mux.HandleFunc("GET /heavy", func(w http.ResponseWriter, r *http.Request) {
+		n := heavyCalcN
+		if qn := r.URL.Query().Get("n"); qn != "" {
+			if parsed, err := strconv.Atoi(qn); err == nil {
+				n = parsed
+			}
+		}
+
 		startedAt := time.Now()
 
-		fibonacci(heavyCalcN)
+		fibonacci(n)
 
 		finishedAt := time.Now()
 		durationMs := finishedAt.Sub(startedAt).Milliseconds()

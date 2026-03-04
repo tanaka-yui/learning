@@ -1,5 +1,6 @@
 use actix_web::{web, App, HttpResponse, HttpServer};
 use chrono::{SecondsFormat, Utc};
+use serde::Deserialize;
 use serde_json::json;
 use std::env;
 use std::time::Instant;
@@ -27,11 +28,17 @@ async fn health() -> HttpResponse {
     }))
 }
 
-async fn heavy(data: web::Data<AppState>) -> HttpResponse {
+#[derive(Deserialize)]
+struct HeavyQuery {
+    n: Option<u32>,
+}
+
+async fn heavy(data: web::Data<AppState>, query: web::Query<HeavyQuery>) -> HttpResponse {
+    let n = query.n.unwrap_or(data.heavy_calc_n);
     let started_at = Utc::now();
     let start = Instant::now();
 
-    fibonacci(data.heavy_calc_n);
+    fibonacci(n);
 
     let duration_ms = start.elapsed().as_millis() as u64;
     let finished_at = Utc::now();

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-server
+  namespace: process-thread
+spec:
+  type: ClusterIP
+  selector:
+    app: go-server
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080

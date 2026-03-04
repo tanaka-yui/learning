@@ -1,5 +1,10 @@
-use axum::{extract::State, routing::get, Json, Router};
+use axum::{
+    extract::{Query, State},
+    routing::get,
+    Json, Router,
+};
 use chrono::{SecondsFormat, Utc};
+use serde::Deserialize;
 use serde_json::{json, Value};
 use std::env;
 use std::time::Instant;
@@ -32,11 +37,17 @@ async fn health() -> Json<Value> {
     }))
 }
 
-async fn heavy(State(state): State<AppState>) -> Json<Value> {
+#[derive(Deserialize)]
+struct HeavyQuery {
+    n: Option<u32>,
+}
+
+async fn heavy(State(state): State<AppState>, Query(query): Query<HeavyQuery>) -> Json<Value> {
+    let n = query.n.unwrap_or(state.heavy_calc_n);
     let started_at = Utc::now();
     let start = Instant::now();
 
-    fibonacci(state.heavy_calc_n);
+    fibonacci(n);
 
     let duration_ms = start.elapsed().as_millis() as u64;
     let finished_at = Utc::now();
