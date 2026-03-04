@@ -62,6 +62,14 @@ K6_MAX_VUS        ?= 200
 K6_STEP_SIZE      ?= 5
 K6_STEP_DURATION  ?= 30s
 K6_PEAK_VUS       ?= 80
+K6_REQUEST_TIMEOUT   ?= 30s
+K6_TIMEOUT_THRESHOLD ?= 5000
+K6_WARMUP_VUS        ?= 5
+K6_WARMUP_DURATION   ?= 30s
+K6_RAMP_UP_DURATION  ?= 1m
+K6_PEAK_DURATION     ?= 3m
+K6_SUSTAIN_DURATION  ?= 2m
+K6_COOLDOWN_DURATION ?= 2m
 
 # Per-language HEAVY_CALC_N defaults for k6 tests (~200ms/req target)
 HEAVY_CALC_N_go         ?= 39
@@ -125,6 +133,9 @@ help:
 	@echo "  K6_TARGET_VUS=50     K6_TEST_PROFILE=ramping|constant|stress|spike|soak"
 	@echo "  K6_PEAK_VUS=80       K6_STEP_SIZE=5"
 	@echo "  K6_HEAVY_CALC_N=39   言語別デフォルト値あり (Go/Rust/Java=39, TS=37, Ruby/PHP=30, Python=29)"
+	@echo "  K6_REQUEST_TIMEOUT=30s  K6_TIMEOUT_THRESHOLD=5000"
+	@echo "  K6_WARMUP_VUS=5      K6_WARMUP_DURATION=30s   K6_RAMP_UP_DURATION=1m"
+	@echo "  K6_PEAK_DURATION=3m  K6_SUSTAIN_DURATION=2m   K6_COOLDOWN_DURATION=2m"
 
 # ============================================================
 # Prerequisites check
@@ -424,6 +435,14 @@ test-autoscale:
 		-e ENDPOINT=/heavy \
 		-e PEAK_VUS=$(K6_PEAK_VUS) \
 		-e HEAVY_CALC_N=$(K6_HEAVY_CALC_N) \
+		-e REQUEST_TIMEOUT=$(K6_REQUEST_TIMEOUT) \
+		-e TIMEOUT_THRESHOLD=$(K6_TIMEOUT_THRESHOLD) \
+		-e WARMUP_VUS=$(K6_WARMUP_VUS) \
+		-e WARMUP_DURATION=$(K6_WARMUP_DURATION) \
+		-e RAMP_UP_DURATION=$(K6_RAMP_UP_DURATION) \
+		-e PEAK_DURATION=$(K6_PEAK_DURATION) \
+		-e SUSTAIN_DURATION=$(K6_SUSTAIN_DURATION) \
+		-e COOLDOWN_DURATION=$(K6_COOLDOWN_DURATION) \
 		grafana/k6 run /scripts/k8s-autoscale-test.js
 
 # ============================================================
