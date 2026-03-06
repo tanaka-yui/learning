@@ -128,6 +128,11 @@ help:
 	@echo "  make watch-pods                     Pod リアルタイム監視"
 	@echo "  make logs K6_TARGET=go              指定サービスのログ表示"
 	@echo ""
+	@echo "--- Thread Pool Demo ---"
+	@echo "  make demo-threadpool                スレッドプール詰まりデモ (Java CLI)"
+	@echo "  make demo-threadpool-down            デモ停止"
+	@echo "  POOL_SIZE=1 FIBONACCI_N=45 PRODUCER_INTERVAL_MS=200 make demo-threadpool"
+	@echo ""
 	@echo "--- Variables ---"
 	@echo "  K6_TARGET=go|ts|java|php|ruby|rust-actix|rust-axum|python"
 	@echo "  K6_TARGET_VUS=50     K6_TEST_PROFILE=ramping|constant|stress|spike|soak"
@@ -444,6 +449,22 @@ test-autoscale:
 		-e SUSTAIN_DURATION=$(K6_SUSTAIN_DURATION) \
 		-e COOLDOWN_DURATION=$(K6_COOLDOWN_DURATION) \
 		grafana/k6 run /scripts/k8s-autoscale-test.js
+
+# ============================================================
+# Monitoring
+# ============================================================
+
+# ============================================================
+# Thread Pool Demo
+# ============================================================
+
+.PHONY: demo-threadpool
+demo-threadpool:
+	docker compose --profile threadpool-demo up --build java-threadpool-demo
+
+.PHONY: demo-threadpool-down
+demo-threadpool-down:
+	docker compose --profile threadpool-demo rm -sf java-threadpool-demo
 
 # ============================================================
 # Monitoring

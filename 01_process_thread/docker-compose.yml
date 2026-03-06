@@ -132,6 +132,17 @@ services:
       - HEAVY_CALC_N=${HEAVY_CALC_N_PYTHON:-38}
       - UVICORN_WORKERS=1
 
+  java-threadpool-demo:
+    build:
+      context: ./java
+      dockerfile: Dockerfile.threadpool
+    environment:
+      - POOL_SIZE=${POOL_SIZE:-2}
+      - FIBONACCI_N=${FIBONACCI_N:-42}
+      - PRODUCER_INTERVAL_MS=${PRODUCER_INTERVAL_MS:-100}
+    profiles:
+      - threadpool-demo
+
   k6:
     image: grafana/k6
     profiles:

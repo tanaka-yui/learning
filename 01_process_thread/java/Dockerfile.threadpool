@@ -1,0 +1,14 @@
+FROM gradle:8-jdk21 AS builder
+
+WORKDIR /app
+
+COPY build.gradle settings.gradle ./
+COPY src/ ./src/
+
+RUN gradle compileJava --no-daemon
+
+FROM eclipse-temurin:21-jre
+
+COPY --from=builder /app/build/classes/java/main /app/classes
+
+ENTRYPOINT ["java", "-cp", "/app/classes", "com.example.ThreadPoolDemo"]
