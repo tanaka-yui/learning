@@ -27,7 +27,13 @@
       "Bash(docker exec:*)",
       "Bash(lsof:*)",
       "Bash(kind delete:*)",
-      "Bash(kind create:*)"
+      "Bash(kind create:*)",
+      "Bash(go mod:*)",
+      "Bash(go build:*)",
+      "Bash(go:*)",
+      "Bash(do sed:*)",
+      "Bash(do echo:*)"
     ]
-  }
+  },
+  "plansDirectory": "./claude/plans"
 }

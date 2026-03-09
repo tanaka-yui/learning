@@ -1,0 +1,67 @@
+services:
+  # バックエンド (2インスタンス)
+  backend-1:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      - INSTANCE_ID=backend-1
+      - HEAVY_CALC_N=35
+      - CACHE_TTL=10
+
+  backend-2:
+    build: ./backend
+    environment:
+      - INSTANCE_ID=backend-2
+      - HEAVY_CALC_N=35
+      - CACHE_TTL=10
+
+  # アプリキャッシュ (インメモリ)
+  app-cache:
+    build: ./app-cache
+    ports:
+      - "8081:8080"
+    environment:
+      - BACKEND_URLS=http://backend-1:8080,http://backend-2:8080
+    depends_on:
+      - backend-1
+      - backend-2
+
+  # 共有キャッシュ (Valkey)
+  valkey:
+    image: valkey/valkey:latest
+    ports:
+      - "6379:6379"
+
+  shared-cache:
+    build: ./shared-cache
+    ports:
+      - "8082:8080"
+    environment:
+      - BACKEND_URLS=http://backend-1:8080,http://backend-2:8080
+      - VALKEY_ADDR=valkey:6379
+    depends_on:
+      - backend-1
+      - backend-2
+      - valkey
+
+  # CDNキャッシュ - nginx版
+  cdn-nginx:
+    build: ./cdn-nginx
+    ports:
+      - "8083:8080"
+    depends_on:
+      - backend-1
+      - backend-2
+
+  # CDNキャッシュ - Go自作版
+  cdn-go:
+    build: ./cdn-go
+    ports:
+      - "8084:8080"
+    environment:
+      - BACKEND_URLS=http://backend-1:8080,http://backend-2:8080
+      - CACHE_VARY_HEADERS=Accept-Language
+    depends_on:
+      - backend-1
+      - backend-2
