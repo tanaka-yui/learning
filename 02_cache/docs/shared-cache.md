@@ -1,6 +1,7 @@
 # shared-cache アーキテクチャ
 
 Valkey（Redis互換）を外部キャッシュストレージとして使用する共有キャッシュ。複数プロセス間でキャッシュを共有できる。
+自身でエンドポイントを持ち、キャッシュMISS時はfibonacci計算を直接実行し、結果をValkeyに保存する。
 
 - ポート: 8082
 - キャッシュストレージ: Valkey (Redis互換) :6379
@@ -14,7 +15,6 @@ sequenceDiagram
     participant C as Client
     participant S as shared-cache :8082
     participant V as Valkey :6379
-    participant B as Backend (1 or 2)
 
     C->>S: GET /heavy?n=30
 
@@ -27,14 +27,10 @@ sequenceDiagram
         S-->>C: 200 OK<br/>X-Cache: HIT
     else Cache MISS (Valkey にデータなし)
         V-->>S: nil
-        S->>B: GET /heavy?n=30 (プロキシ)
-        B-->>S: 200 OK<br/>Cache-Control: public, max-age=10<br/>X-Backend-Instance: backend-1
-        S->>S: Cache-Control 解析
-        alt キャッシュ可能 (public + max-age)
-            S->>S: レスポンスを JSON シリアライズ
-            S->>V: SETEX key TTL json_data
-        end
-        S-->>C: 200 OK<br/>X-Cache: MISS<br/>X-Backend-Instance: backend-1
+        S->>S: Fibonacci計算実行
+        S->>S: レスポンスを JSON シリアライズ
+        S->>V: SETEX key TTL json_data
+        S-->>C: 200 OK<br/>X-Cache: MISS<br/>X-Backend-Instance: shared-cache
     end
 ```
 
@@ -48,17 +44,12 @@ flowchart TD
     VALKEY_GET -->|HIT| DESER[JSON デシリアライズ<br/>CachedResponse]
     DESER --> RESP_HIT[レスポンス返却<br/>X-Cache: HIT]
 
-    VALKEY_GET -->|MISS| PROXY[バックエンドへプロキシ<br/>httputil.ReverseProxy]
-    PROXY --> BACKEND[Backend :8080]
-    BACKEND --> CC_PARSE[Cache-Control 解析]
+    VALKEY_GET -->|MISS| CALC[Fibonacci計算実行]
+    CALC --> CC_GEN[Cache-Control ヘッダー生成<br/>public, max-age=TTL]
 
-    CC_PARSE --> CHECK{キャッシュ可否判定}
-    CHECK -->|public + max-age有効| SER[JSON シリアライズ]
-    CHECK -->|キャッシュ不可| SKIP[保存スキップ]
-
+    CC_GEN --> SER[JSON シリアライズ]
     SER --> VALKEY_SET[Valkey SETEX<br/>TTL = max-age]
     VALKEY_SET --> RESP_MISS[レスポンス返却<br/>X-Cache: MISS]
-    SKIP --> RESP_MISS
 
     subgraph Valkey ストレージ
         VDATA["Key: GET:/heavy?n=30"]

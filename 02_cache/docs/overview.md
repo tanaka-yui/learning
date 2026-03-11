@@ -9,25 +9,25 @@ flowchart LR
     C --> N["cdn-nginx<br/>:8083"]
     C --> G["cdn-go<br/>:8084"]
 
-    A -->|プロキシ| B1[backend-1<br/>:8080]
-    A -->|プロキシ| B2[backend-2<br/>:8080]
+    A -.-|メモリ| MA["map + RWMutex"]
 
-    S -->|プロキシ| B1
-    S -->|プロキシ| B2
     S <-->|GET/SETEX| V[(Valkey<br/>:6379)]
 
-    N -->|proxy_pass| B1
-    N -->|proxy_pass| B2
+    N -->|proxy_pass| B1[backend-1<br/>:8080]
+    N -->|proxy_pass| B2[backend-2<br/>:8080]
 
     G -->|プロキシ| B1
     G -->|プロキシ| B2
 
     subgraph キャッシュストレージ
-        A -.-|メモリ| MA["map + RWMutex"]
-        S -.-|外部| V
-        N -.-|ディスク| DN["/var/cache/nginx"]
-        G -.-|メモリ| MG["map + RWMutex"]
+        MA
+        V
+        DN["/var/cache/nginx"]
+        MG["map + RWMutex"]
     end
+
+    N -.-|ディスク| DN
+    G -.-|メモリ| MG
 ```
 
 ## パターン比較
@@ -35,6 +35,7 @@ flowchart LR
 | 特性 | app-cache | shared-cache | cdn-nginx | cdn-go |
 |------|-----------|-------------|-----------|--------|
 | ポート | 8081 | 8082 | 8083 | 8084 |
+| 方式 | 自身で計算 + キャッシュ | 自身で計算 + キャッシュ | リバースプロキシ + キャッシュ | リバースプロキシ + キャッシュ |
 | ストレージ | プロセス内メモリ | Valkey (Redis互換) | ディスク + 共有メモリ | プロセス内メモリ |
 | 永続化 | なし (再起動で消失) | あり (Valkey保存) | あり (ディスク保存) | なし (再起動で消失) |
 | 複数プロセス共有 | 不可 | 可能 | 不可 (単一nginx内) | 不可 |
@@ -59,9 +60,9 @@ flowchart TD
     NGINX --> NGINX_STORE["ディスク検索<br/>proxy_cache<br/>keys_zone メタデータ"]
     CDN_GO --> CDN_STORE["メモリ検索<br/>map[string]*cacheEntry<br/>sync.RWMutex + Vary"]
 
-    APP_STORE -->|MISS| BACKEND[Backend<br/>Fibonacci計算]
-    SHARED_STORE -->|MISS| BACKEND
-    NGINX_STORE -->|MISS| BACKEND
+    APP_STORE -->|MISS| APP_CALC[自身でFibonacci計算]
+    SHARED_STORE -->|MISS| SHARED_CALC[自身でFibonacci計算]
+    NGINX_STORE -->|MISS| BACKEND[Backend<br/>Fibonacci計算]
     CDN_STORE -->|MISS| BACKEND
 
     APP_STORE -->|HIT| RESP[レスポンス<br/>X-Cache: HIT]

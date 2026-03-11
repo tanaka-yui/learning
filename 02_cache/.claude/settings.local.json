@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose:*)",
+      "Bash(sleep 2 && echo \"=== app-cache /health ===\" && curl -s http://localhost:8081/health | jq . && echo \"\" && echo \"=== shared-cache /health ===\" && curl -s http://localhost:8082/health | jq . && echo \"\" && echo \"=== app-cache /heavy 1回目 \\(MISS期待\\) ===\" && curl -sD - http://localhost:8081/heavy?n=30 2>/dev/null | head -20 && echo \"\" && echo \"=== app-cache /heavy 2回目 \\(HIT期待\\) ===\" && curl -sD - http://localhost:8081/heavy?n=30 2>/dev/null | head -20 && echo \"\" && echo \"=== shared-cache /heavy 1回目 \\(MISS期待\\) ===\" && curl -sD - http://localhost:8082/heavy?n=30 2>/dev/null | head -20 && echo \"\" && echo \"=== shared-cache /heavy 2回目 \\(HIT期待\\) ===\" && curl -sD - http://localhost:8082/heavy?n=30 2>/dev/null | head -20)",
+      "Bash(sleep 1 && echo \"=== app-cache /health ===\" && curl -s 'http://localhost:8081/health' | jq . && echo \"\" && echo \"=== shared-cache /health ===\" && curl -s 'http://localhost:8082/health' | jq .)",
+      "Bash(curl -s 'http://localhost:8081/health')",
+      "Bash(curl -s 'http://localhost:8082/health')",
+      "Bash(curl -v 'http://localhost:8081/health' 2>&1)",
+      "Bash(curl -s 'http://127.0.0.1:8081/health' 2>&1)"
+    ]
+  }
+}

@@ -1,18 +1,18 @@
 # 02_cache: キャッシュ動作理解プロジェクト
 
 キャッシュの仕組み理解とパフォーマンス比較を目的とした学習環境。
-各キャッシュ層（アプリ/共有/CDN）を独立したコンポーネントとして実装し、共通バックエンドにプロキシする構成。
+各キャッシュ層（アプリ/共有/CDN）を独立したコンポーネントとして実装し、キャッシュの有無によるパフォーマンス差を比較する構成。
 
 ## アーキテクチャ
 
 ```
 クライアント (curl)
-  ├─ app-cache    (:8081) → [インメモリキャッシュ]     → backend-1/2
-  ├─ shared-cache (:8082) → [Valkey キャッシュ]       → backend-1/2
+  ├─ app-cache    (:8081) → [インメモリキャッシュ + 自身で計算]
+  ├─ shared-cache (:8082) → [Valkey キャッシュ + 自身で計算]
   ├─ cdn-nginx    (:8083) → [nginx proxy_cache]      → backend-1/2
   └─ cdn-go       (:8084) → [Go自作CDNキャッシュ]      → backend-1/2
 
-バックエンド: Go HTTPサーバー × 2インスタンス (fibonacci計算)
+バックエンド: Go HTTPサーバー × 2インスタンス (cdn-nginx/cdn-go 用)
 ```
 
 ## 前提条件
@@ -52,6 +52,7 @@ curl -D - http://localhost:8084/heavy?n=30   # cdn-go
 ### アプリキャッシュ (app-cache)
 
 アプリケーションプロセス内の変数（`map + sync.RWMutex`）にキャッシュ。
+自身でエンドポイント（`/heavy`）を持ち、キャッシュMISS時はfibonacci計算を直接実行する。
 最も高速だが、プロセス再起動でキャッシュが消失する。複数プロセス間で共有不可。
 
 -> [アーキテクチャ詳細](docs/app-cache.md)
@@ -59,6 +60,7 @@ curl -D - http://localhost:8084/heavy?n=30   # cdn-go
 ### 共有キャッシュ (shared-cache + Valkey)
 
 Valkey（Redis互換）にキャッシュを保存。
+自身でエンドポイント（`/heavy`）を持ち、キャッシュMISS時はfibonacci計算を直接実行し、結果をValkeyに保存する。
 複数プロセスからキャッシュを共有可能。ネットワーク通信のオーバーヘッドがある。
 
 -> [アーキテクチャ詳細](docs/shared-cache.md)

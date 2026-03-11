@@ -1,35 +1,55 @@
 package main
 
 import (
-	"io"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"strings"
-	"sync/atomic"
+	"strconv"
 	"time"
 )
 
+func fibonacci(n int) int {
+	if n <= 1 {
+		return n
+	}
+	return fibonacci(n-1) + fibonacci(n-2)
+}
+
 func main() {
-	backendURLsEnv := os.Getenv("BACKEND_URLS")
-	if backendURLsEnv == "" {
-		log.Fatal("BACKEND_URLS environment variable is required")
+	heavyCalcN := 35
+	if v := os.Getenv("HEAVY_CALC_N"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil {
+			heavyCalcN = parsed
+		}
 	}
 
-	backends := strings.Split(backendURLsEnv, ",")
-	for i, b := range backends {
-		backends[i] = strings.TrimSpace(b)
-	}
-	if len(backends) == 0 {
-		log.Fatal("BACKEND_URLS must contain at least one URL")
+	instanceID := os.Getenv("INSTANCE_ID")
+	if instanceID == "" {
+		instanceID = "app-cache"
 	}
 
-	log.Printf("Starting reverse proxy with backends: %v", backends)
+	cacheTTL := 10
+	if v := os.Getenv("CACHE_TTL"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil {
+			cacheTTL = parsed
+		}
+	}
 
-	var counter uint64
 	memCache := newCache()
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"status":     "ok",
+			"instanceId": instanceID,
+		})
+	})
+
+	mux.HandleFunc("GET /heavy", func(w http.ResponseWriter, r *http.Request) {
 		cacheKey := buildCacheKey(r)
 
 		// Check cache
@@ -48,83 +68,71 @@ func main() {
 
 		log.Printf("CACHE MISS: %s", cacheKey)
 
-		// Round-robin backend selection
-		idx := atomic.AddUint64(&counter, 1) - 1
-		backend := backends[idx%uint64(len(backends))]
-
-		// Build backend URL
-		targetURL := backend + r.URL.RequestURI()
-
-		// Create proxy request
-		proxyReq, err := http.NewRequestWithContext(r.Context(), r.Method, targetURL, r.Body)
-		if err != nil {
-			http.Error(w, "Failed to create proxy request", http.StatusBadGateway)
-			log.Printf("ERROR creating proxy request: %v", err)
-			return
-		}
-
-		// Copy request headers
-		for key, values := range r.Header {
-			for _, v := range values {
-				proxyReq.Header.Add(key, v)
+		n := heavyCalcN
+		if qn := r.URL.Query().Get("n"); qn != "" {
+			if parsed, err := strconv.Atoi(qn); err == nil {
+				n = parsed
 			}
 		}
 
-		// Send request to backend
-		client := &http.Client{Timeout: 30 * time.Second}
-		resp, err := client.Do(proxyReq)
+		startedAt := time.Now()
+		result := fibonacci(n)
+		finishedAt := time.Now()
+		durationMs := finishedAt.Sub(startedAt).Milliseconds()
+
+		respHeader := http.Header{}
+		respHeader.Set("Content-Type", "application/json")
+		respHeader.Set("Cache-Control", fmt.Sprintf("public, max-age=%d", cacheTTL))
+		respHeader.Set("X-Backend-Instance", instanceID)
+
+		body, err := json.Marshal(map[string]interface{}{
+			"instanceId": instanceID,
+			"n":          n,
+			"result":     result,
+			"startedAt":  startedAt.UTC().Format(time.RFC3339Nano),
+			"finishedAt": finishedAt.UTC().Format(time.RFC3339Nano),
+			"durationMs": durationMs,
+		})
 		if err != nil {
-			http.Error(w, "Backend request failed", http.StatusBadGateway)
-			log.Printf("ERROR from backend: %v", err)
+			http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
 			return
 		}
-		defer resp.Body.Close()
 
-		// Read response body
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			http.Error(w, "Failed to read backend response", http.StatusBadGateway)
-			log.Printf("ERROR reading response body: %v", err)
-			return
-		}
-
-		// Check if response should be cached
-		ccHeader := resp.Header.Get("Cache-Control")
-		if ccHeader != "" {
-			directives := parseCacheControl(ccHeader)
-			if shouldCache(directives) {
-				if ttl, ok := parseMaxAge(directives); ok {
-					entry := &cacheEntry{
-						statusCode: resp.StatusCode,
-						header:     resp.Header.Clone(),
-						body:       body,
-						expiresAt:  time.Now().Add(ttl),
-					}
-					memCache.set(cacheKey, entry)
-					log.Printf("CACHED: %s (TTL: %v)", cacheKey, ttl)
+		// Cache the response
+		ccHeader := respHeader.Get("Cache-Control")
+		directives := parseCacheControl(ccHeader)
+		if shouldCache(directives) {
+			if ttl, ok := parseMaxAge(directives); ok {
+				entry := &cacheEntry{
+					statusCode: http.StatusOK,
+					header:     respHeader.Clone(),
+					body:       body,
+					expiresAt:  time.Now().Add(ttl),
 				}
+				memCache.set(cacheKey, entry)
+				log.Printf("CACHED: %s (TTL: %v)", cacheKey, ttl)
 			}
 		}
 
 		// Write response
-		for key, values := range resp.Header {
+		for key, values := range respHeader {
 			for _, v := range values {
 				w.Header().Add(key, v)
 			}
 		}
 		w.Header().Set("X-Cache", "MISS")
-		w.WriteHeader(resp.StatusCode)
+		w.WriteHeader(http.StatusOK)
 		w.Write(body)
-	}
+	})
 
 	server := &http.Server{
 		Addr:         ":8080",
-		Handler:      http.HandlerFunc(handler),
+		Handler:      mux,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
 
-	log.Printf("Listening on :8080")
+	log.Printf("app-cache listening on :8080 (instance=%s, heavyCalcN=%d, cacheTTL=%d)", instanceID, heavyCalcN, cacheTTL)
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
