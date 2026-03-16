@@ -69,3 +69,10 @@ services:
       - "8084:8080"
     profiles:
       - csrf
+
+  csrf-secure-backend:
+    build: ./csrf/secure/backend
+    ports:
+      - "8085:8080"
+    profiles:
+      - csrf
