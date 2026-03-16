@@ -1,1 +1,7 @@
-services: {}
+services:
+  sqli-vulnerable-backend:
+    build: ./sql-injection/vulnerable/backend
+    ports:
+      - "8080:8080"
+    profiles:
+      - sql-injection
