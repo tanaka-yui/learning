@@ -37,3 +37,10 @@ services:
       - "8082:8080"
     profiles:
       - xss
+
+  xss-secure-backend:
+    build: ./xss/secure/backend
+    ports:
+      - "8083:8080"
+    profiles:
+      - xss
