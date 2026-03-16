@@ -12,3 +12,21 @@ services:
       - "8081:8080"
     profiles:
       - sql-injection
+
+  sqli-vulnerable-frontend:
+    build: ./sql-injection/vulnerable/frontend
+    ports:
+      - "3000:80"
+    profiles:
+      - sql-injection
+    depends_on:
+      - sqli-vulnerable-backend
+
+  sqli-secure-frontend:
+    build: ./sql-injection/secure/frontend
+    ports:
+      - "3001:80"
+    profiles:
+      - sql-injection
+    depends_on:
+      - sqli-secure-backend
