@@ -110,3 +110,10 @@ services:
       - "8086:8080"
     profiles:
       - auth-bypass
+
+  auth-secure-backend:
+    build: ./auth-bypass/secure/backend
+    ports:
+      - "8087:8080"
+    profiles:
+      - auth-bypass
