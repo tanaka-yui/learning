@@ -30,3 +30,10 @@ services:
       - sql-injection
     depends_on:
       - sqli-secure-backend
+
+  xss-vulnerable-backend:
+    build: ./xss/vulnerable/backend
+    ports:
+      - "8082:8080"
+    profiles:
+      - xss
