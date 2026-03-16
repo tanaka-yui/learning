@@ -62,3 +62,10 @@ services:
       - xss
     depends_on:
       - xss-secure-backend
+
+  csrf-vulnerable-backend:
+    build: ./csrf/vulnerable/backend
+    ports:
+      - "8084:8080"
+    profiles:
+      - csrf
