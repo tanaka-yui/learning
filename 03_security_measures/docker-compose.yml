@@ -174,3 +174,28 @@ services:
       - "8090:8080"
     profiles:
       - command-injection
+
+  cmdi-secure-backend:
+    build: ./command-injection/secure/backend
+    ports:
+      - "8091:8080"
+    profiles:
+      - command-injection
+
+  cmdi-vulnerable-frontend:
+    build: ./command-injection/vulnerable/frontend
+    ports:
+      - "3010:80"
+    profiles:
+      - command-injection
+    depends_on:
+      - cmdi-vulnerable-backend
+
+  cmdi-secure-frontend:
+    build: ./command-injection/secure/frontend
+    ports:
+      - "3011:80"
+    profiles:
+      - command-injection
+    depends_on:
+      - cmdi-secure-backend
