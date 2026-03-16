@@ -135,3 +135,10 @@ services:
       - auth-bypass
     depends_on:
       - auth-secure-backend
+
+  path-vulnerable-backend:
+    build: ./path-traversal/vulnerable/backend
+    ports:
+      - "8088:8080"
+    profiles:
+      - path-traversal
