@@ -44,3 +44,21 @@ services:
       - "8083:8080"
     profiles:
       - xss
+
+  xss-vulnerable-frontend:
+    build: ./xss/vulnerable/frontend
+    ports:
+      - "3002:80"
+    profiles:
+      - xss
+    depends_on:
+      - xss-vulnerable-backend
+
+  xss-secure-frontend:
+    build: ./xss/secure/frontend
+    ports:
+      - "3003:80"
+    profiles:
+      - xss
+    depends_on:
+      - xss-secure-backend
