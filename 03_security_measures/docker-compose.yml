@@ -76,3 +76,30 @@ services:
       - "8085:8080"
     profiles:
       - csrf
+
+  csrf-vulnerable-frontend:
+    build: ./csrf/vulnerable/frontend
+    ports:
+      - "3004:80"
+    profiles:
+      - csrf
+    depends_on:
+      - csrf-vulnerable-backend
+
+  csrf-secure-frontend:
+    build: ./csrf/secure/frontend
+    ports:
+      - "3005:80"
+    profiles:
+      - csrf
+    depends_on:
+      - csrf-secure-backend
+
+  csrf-attacker-site:
+    image: nginx:alpine
+    volumes:
+      - ./csrf/attacker-site:/usr/share/nginx/html:ro
+    ports:
+      - "4000:80"
+    profiles:
+      - csrf
