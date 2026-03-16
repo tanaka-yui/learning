@@ -103,3 +103,10 @@ services:
       - "4000:80"
     profiles:
       - csrf
+
+  auth-vulnerable-backend:
+    build: ./auth-bypass/vulnerable/backend
+    ports:
+      - "8086:8080"
+    profiles:
+      - auth-bypass
