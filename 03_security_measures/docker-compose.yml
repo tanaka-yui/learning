@@ -167,3 +167,10 @@ services:
       - path-traversal
     depends_on:
       - path-secure-backend
+
+  cmdi-vulnerable-backend:
+    build: ./command-injection/vulnerable/backend
+    ports:
+      - "8090:8080"
+    profiles:
+      - command-injection
