@@ -117,3 +117,21 @@ services:
       - "8087:8080"
     profiles:
       - auth-bypass
+
+  auth-vulnerable-frontend:
+    build: ./auth-bypass/vulnerable/frontend
+    ports:
+      - "3006:80"
+    profiles:
+      - auth-bypass
+    depends_on:
+      - auth-vulnerable-backend
+
+  auth-secure-frontend:
+    build: ./auth-bypass/secure/frontend
+    ports:
+      - "3007:80"
+    profiles:
+      - auth-bypass
+    depends_on:
+      - auth-secure-backend

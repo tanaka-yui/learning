@@ -1,0 +1,199 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.banner {
+  padding: 12px 20px;
+  border-radius: 4px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.banner-success {
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+h1 {
+  margin-bottom: 24px;
+  color: #1a1a1a;
+}
+
+h2 {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+  max-width: 400px;
+}
+
+.login-form input {
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.login-form input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.button {
+  padding: 10px 24px;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.button-primary {
+  background-color: #3b82f6;
+}
+
+.button-primary:hover {
+  background-color: #2563eb;
+}
+
+.button-danger {
+  background-color: #ef4444;
+}
+
+.button-danger:hover {
+  background-color: #dc2626;
+}
+
+.button-warning {
+  background-color: #f59e0b;
+}
+
+.button-warning:hover {
+  background-color: #d97706;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #dc2626;
+  margin-bottom: 16px;
+}
+
+.success {
+  color: #16a34a;
+  margin-bottom: 16px;
+}
+
+.user-info {
+  background-color: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.user-info p {
+  margin-bottom: 8px;
+}
+
+.brute-force-section {
+  background-color: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.brute-force-results {
+  margin-top: 16px;
+}
+
+.brute-force-results p {
+  margin-bottom: 4px;
+}
+
+.attempt-log {
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: #1e293b;
+  color: #e2e8f0;
+  padding: 12px;
+  border-radius: 4px;
+  margin-top: 12px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+}
+
+.attempt-log p {
+  margin-bottom: 2px;
+}
+
+.attempt-success {
+  color: #4ade80;
+}
+
+.attempt-fail {
+  color: #f87171;
+}
+
+.attempt-rate-limited {
+  color: #fbbf24;
+}
+
+.rate-limit-info {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  border-radius: 4px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.security-info {
+  background-color: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.security-info ul {
+  list-style: disc;
+  padding-left: 20px;
+}
+
+.security-info li {
+  margin-bottom: 8px;
+  color: #166534;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
