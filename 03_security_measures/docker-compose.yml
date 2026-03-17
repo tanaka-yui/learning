@@ -95,6 +95,22 @@ services:
     depends_on:
       - csrf-secure-backend
 
+  csrf-secure-spa-backend:
+    build: ./csrf/secure-spa/backend
+    ports:
+      - "8092:8080"
+    profiles:
+      - csrf
+
+  csrf-secure-spa-frontend:
+    build: ./csrf/secure-spa/frontend
+    ports:
+      - "3012:80"
+    profiles:
+      - csrf
+    depends_on:
+      - csrf-secure-spa-backend
+
   csrf-attacker-site:
     image: nginx:alpine
     volumes:

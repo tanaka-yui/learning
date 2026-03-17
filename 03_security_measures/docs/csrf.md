@@ -48,9 +48,11 @@ make csrf
 | サービス | URL | 説明 |
 |---------|-----|------|
 | 脆弱版バックエンド | http://localhost:8084 | CSRFトークン検証なし |
-| 対策版バックエンド | http://localhost:8085 | CSRFトークン検証+SameSite Cookie |
+| 対策版バックエンド（トークン） | http://localhost:8085 | CSRFトークン検証+SameSite Cookie |
+| 対策版バックエンド（SPA） | http://localhost:8092 | カスタムオリジンヘッダー検証+SameSite Cookie |
 | 脆弱版フロントエンド | http://localhost:3004 | CSRF対策なしのパスワード変更画面 |
-| 対策版フロントエンド | http://localhost:3005 | CSRFトークン付きのパスワード変更画面 |
+| 対策版フロントエンド（トークン） | http://localhost:3005 | CSRFトークン付きのパスワード変更画面 |
+| 対策版フロントエンド（SPA） | http://localhost:3012 | カスタムオリジンヘッダー付きのパスワード変更画面 |
 | 攻撃者サイト | http://localhost:4000 | 自動でパスワード変更を試みる悪意のあるページ |
 
 ## 4. 攻撃手順
@@ -248,6 +250,46 @@ const response = await fetch(`${API_URL}/change-password`, {
 });
 ```
 
+### カスタムオリジンヘッダーによる検証（SPA向け）
+
+SPAではサーバーサイドレンダリングがないため、HTMLフォームにCSRFトークンを埋め込む従来のパターンが使えない。そこで、フロントエンドの `window.location.origin`（変更不可能なホスト名）をカスタムヘッダー `X-Custom-Origin` で送信し、バックエンドで許可済みオリジンとの一致を検証する。
+
+この対策パターンの実装は `csrf/secure-spa/` ディレクトリに独立して配置されている。
+
+**バックエンド — カスタムオリジン検証:**
+
+```go
+// カスタムオリジンヘッダーを検証する（SPA向けCSRF対策）
+func validateCustomOrigin(r *http.Request) bool {
+	origin := r.Header.Get("X-Custom-Origin")
+	if origin == "" {
+		return false
+	}
+	return origin == getAllowedOrigin()
+}
+```
+
+**フロントエンド — カスタムオリジンヘッダーの送信:**
+
+```tsx
+// カスタムオリジンヘッダーを含めてパスワード変更リクエストを送信する
+const response = await fetch(`${API_URL}/change-password`, {
+  method: "POST",
+  credentials: "include",
+  headers: {
+    "Content-Type": "application/json",
+    "X-Custom-Origin": window.location.origin,
+  },
+  body: JSON.stringify({ new_password: newPassword }),
+});
+```
+
+**なぜ有効か:**
+
+- カスタムヘッダー（`X-Custom-Origin`）を含むリクエストは「シンプルリクエスト」に該当しないため、ブラウザがCORSプリフライトリクエストを自動送信する
+- CORSが適切に設定されていれば（`Access-Control-Allow-Origin` が特定オリジンのみ）、攻撃者サイトからのプリフライトは拒否される
+- 仮にCORS設定に不備があっても、攻撃者サイトの `window.location.origin` は正規サイトと異なるため、バックエンドの検証で弾かれる
+
 ## 7. まとめ
 
 CSRF対策のベストプラクティスは以下の通りである。
@@ -256,4 +298,5 @@ CSRF対策のベストプラクティスは以下の通りである。
 - **SameSite Cookie属性の設定**: `SameSite=Strict` または `SameSite=Lax` を設定し、異なるオリジンからのCookie送信を防止する
 - **CORSの適切な設定**: `Access-Control-Allow-Origin` に `*` を使わず、信頼するオリジンのみを許可する
 - **HttpOnly Cookieの使用**: `HttpOnly` フラグを設定し、JavaScriptからのCookieアクセスを防止する
-- **多層防御**: CSRFトークン、SameSite Cookie、CORS設定を組み合わせ、単一の防御層に依存しない
+- **カスタムオリジンヘッダーの検証**: SPAでは `window.location.origin` をカスタムヘッダー（`X-Custom-Origin`）で送信し、バックエンドで許可済みオリジンと一致するか検証する
+- **多層防御**: CSRFトークン、SameSite Cookie、CORS設定、カスタムオリジンヘッダーを組み合わせ、単一の防御層に依存しない

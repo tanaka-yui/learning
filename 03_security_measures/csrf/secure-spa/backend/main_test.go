@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -38,40 +37,8 @@ func loginForTest(t *testing.T, server *httptest.Server) *http.Cookie {
 	return nil
 }
 
-// テスト用のヘルパー: CSRFトークンを取得する
-func getCSRFTokenForTest(t *testing.T, server *httptest.Server, sessionCookie *http.Cookie) string {
-	t.Helper()
-	req, err := http.NewRequest(http.MethodGet, server.URL+"/csrf-token", nil)
-	if err != nil {
-		t.Fatalf("リクエスト作成に失敗: %v", err)
-	}
-	req.AddCookie(sessionCookie)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatalf("CSRFトークン取得リクエストに失敗: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("CSRFトークン取得に失敗: ステータスコード %d", resp.StatusCode)
-	}
-
-	var result map[string]string
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		t.Fatalf("レスポンスのデコードに失敗: %v", err)
-	}
-
-	token, ok := result["token"]
-	if !ok || token == "" {
-		t.Fatal("CSRFトークンがレスポンスに含まれていません")
-	}
-	return token
-}
-
-// CSRFトークンなしでパスワード変更すると403が返ることを検証する
-func TestChangePasswordWithoutCSRFToken(t *testing.T) {
+// カスタムオリジンヘッダーなしでパスワード変更すると403が返ることを検証する
+func TestChangePasswordWithoutCustomOrigin(t *testing.T) {
 	resetStores()
 
 	server := httptest.NewServer(newServeMux())
@@ -95,19 +62,18 @@ func TestChangePasswordWithoutCSRFToken(t *testing.T) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusForbidden {
-		t.Errorf("CSRFトークンなしで403を期待しましたが、%d が返されました", resp.StatusCode)
+		t.Errorf("カスタムオリジンヘッダーなしで403を期待しましたが、%d が返されました", resp.StatusCode)
 	}
 }
 
-// 正しいCSRFトークン付きでパスワード変更すると200が返ることを検証する
-func TestChangePasswordWithCorrectCSRFToken(t *testing.T) {
+// 正しいカスタムオリジンヘッダー付きでパスワード変更すると200が返ることを検証する
+func TestChangePasswordWithCorrectCustomOrigin(t *testing.T) {
 	resetStores()
 
 	server := httptest.NewServer(newServeMux())
 	defer server.Close()
 
 	sessionCookie := loginForTest(t, server)
-	csrfToken := getCSRFTokenForTest(t, server, sessionCookie)
 
 	body := `{"new_password":"newpass123"}`
 	req, err := http.NewRequest(http.MethodPost, server.URL+"/change-password", strings.NewReader(body))
@@ -115,7 +81,7 @@ func TestChangePasswordWithCorrectCSRFToken(t *testing.T) {
 		t.Fatalf("リクエスト作成に失敗: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-CSRF-Token", csrfToken)
+	req.Header.Set("X-Custom-Origin", getAllowedOrigin())
 	req.AddCookie(sessionCookie)
 
 	client := &http.Client{}
@@ -126,12 +92,12 @@ func TestChangePasswordWithCorrectCSRFToken(t *testing.T) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		t.Errorf("正しいCSRFトークン付きで200を期待しましたが、%d が返されました", resp.StatusCode)
+		t.Errorf("正しいカスタムオリジン付きで200を期待しましたが、%d が返されました", resp.StatusCode)
 	}
 }
 
-// GET /csrf-token がCSRFトークンをJSON形式で返すことを検証する
-func TestGetCSRFToken(t *testing.T) {
+// 不正なカスタムオリジンヘッダーでパスワード変更すると403が返ることを検証する
+func TestChangePasswordWithInvalidCustomOrigin(t *testing.T) {
 	resetStores()
 
 	server := httptest.NewServer(newServeMux())
@@ -139,37 +105,24 @@ func TestGetCSRFToken(t *testing.T) {
 
 	sessionCookie := loginForTest(t, server)
 
-	req, err := http.NewRequest(http.MethodGet, server.URL+"/csrf-token", nil)
+	body := `{"new_password":"newpass123"}`
+	req, err := http.NewRequest(http.MethodPost, server.URL+"/change-password", strings.NewReader(body))
 	if err != nil {
 		t.Fatalf("リクエスト作成に失敗: %v", err)
 	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Custom-Origin", "http://evil-site.com")
 	req.AddCookie(sessionCookie)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Fatalf("CSRFトークン取得リクエストに失敗: %v", err)
+		t.Fatalf("パスワード変更リクエストに失敗: %v", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("CSRFトークン取得で200を期待しましたが、%d が返されました", resp.StatusCode)
-	}
-
-	var result map[string]string
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		t.Fatalf("レスポンスのデコードに失敗: %v", err)
-	}
-
-	token, ok := result["token"]
-	if !ok {
-		t.Error("レスポンスに 'token' キーが含まれていません")
-	}
-	if token == "" {
-		t.Error("CSRFトークンが空です")
-	}
-	if len(token) != 32 {
-		t.Errorf("CSRFトークンの長さが32文字を期待しましたが、%d でした", len(token))
+	if resp.StatusCode != http.StatusForbidden {
+		t.Errorf("不正なカスタムオリジンで403を期待しましたが、%d が返されました", resp.StatusCode)
 	}
 }
 
@@ -210,40 +163,8 @@ func TestCookieSecuritySettings(t *testing.T) {
 		t.Error("CookieにHttpOnly=trueが設定されていません")
 	}
 
-	// SameSite=Strictの検証
-	// net/http.Cookieでは SameSite フィールドで確認する
 	if sessionCookie.SameSite != http.SameSiteStrictMode {
 		t.Errorf("CookieのSameSiteがStrictを期待しましたが、%v が設定されていました", sessionCookie.SameSite)
-	}
-}
-
-// 不正なCSRFトークンでパスワード変更すると403が返ることを検証する
-func TestChangePasswordWithInvalidCSRFToken(t *testing.T) {
-	resetStores()
-
-	server := httptest.NewServer(newServeMux())
-	defer server.Close()
-
-	sessionCookie := loginForTest(t, server)
-
-	body := `{"new_password":"newpass123"}`
-	req, err := http.NewRequest(http.MethodPost, server.URL+"/change-password", strings.NewReader(body))
-	if err != nil {
-		t.Fatalf("リクエスト作成に失敗: %v", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-CSRF-Token", "invalid-token-value")
-	req.AddCookie(sessionCookie)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatalf("パスワード変更リクエストに失敗: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusForbidden {
-		t.Errorf("不正なCSRFトークンで403を期待しましたが、%d が返されました", resp.StatusCode)
 	}
 }
 
@@ -259,8 +180,4 @@ func resetStores() {
 	sessionMu.Lock()
 	sessions = map[string]string{}
 	sessionMu.Unlock()
-
-	csrfTokenMu.Lock()
-	csrfTokens = map[string]string{}
-	csrfTokenMu.Unlock()
 }
