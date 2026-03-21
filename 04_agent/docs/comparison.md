@@ -11,7 +11,7 @@
 | **ポート** | 4001 | 4002 | 4003 | 4004 | 4005 |
 | **ツール定義** | `createTool()` + zodスキーマ | `createTool()` + zodスキーマ | `@tool` デコレータ | `tool()` + zodスキーマ | 手動JSONスキーマ |
 | **スキル管理** | 独自関数 | 独自関数 | 独自関数 | 独自関数 | 独自関数 |
-| **メモリ管理** | Redis（手動） | Redis（手動） | Redis（手動） | Redis（手動） | なし |
+| **メモリ管理** | PostgreSQL（Mastra組み込み） | Redis（手動） | Redis（手動） | Redis（手動） | なし |
 | **モデル設定** | `anthropic("claude-sonnet-4-6")` | `anthropic("claude-sonnet-4-6")` | `AnthropicModel(model_id=...)` | `new AnthropicModel({modelId: ...})` | `client.messages.create(model=...)` |
 | **Agent構築** | `new Agent({...})` | `new Mastra({agents: {...}})` | `Agent(model=..., tools=[...])` | `new Agent({model, tools, systemPrompt})` | 手動ループ実装 |
 | **ツール実行** | フレームワーク自動 | フレームワーク自動 | フレームワーク自動 | フレームワーク自動 | 手動ループ |
@@ -22,25 +22,36 @@
 
 ### mastra
 
-**パッケージ:** `@mastra/core`
+**パッケージ:** `@mastra/core` + `@mastra/memory` + `@mastra/pg`
 
 **特徴:**
 - `createTool()` でZodスキーマベースのツールを定義
-- `Agent` クラスでAgentを構築、`agent.generate(message)` で呼び出し
-- フレームワーク自体がFastifyを内包していないため、手動でHTTPサーバーを立てる必要がある
+- `Agent` クラスに `memory: new Memory({ storage: new PostgresStore({...}) })` を渡すだけで会話履歴の永続化が完結
+- `agent.generate(message, { memory: { resource, thread } })` で会話履歴の読み書きを自動管理 — Redis の手動操作が不要
 - AI SDK (`@ai-sdk/anthropic`) を通じてAnthropicモデルを使用
+- メモリ: PostgreSQL（ポート5432）
 
-**ツール定義の例:**
+**メモリ設定の例:**
 ```typescript
-const createTaskTool = createTool({
-  id: "createTask",
-  description: "新しいタスクを作成する",
-  inputSchema: z.object({ title: z.string(), priority: z.enum(["low", "medium", "high"]) }),
-  execute: async (inputData) => createTask(inputData),
+import { Memory } from "@mastra/memory";
+import { PostgresStore } from "@mastra/pg";
+
+export const taskAgent = new Agent({
+  // ...
+  memory: new Memory({
+    storage: new PostgresStore({
+      connectionString: process.env.DATABASE_URL,
+    }),
+  }),
+});
+
+// 呼び出し時に sessionId を thread として渡すだけで自動保存
+const result = await taskAgent.generate(message, {
+  memory: { resource: "default-user", thread: sessionId },
 });
 ```
 
-**向いているユースケース:** TypeScriptネイティブでAgentを構築したい場合。フレームワークの抽象化度が高く、シンプルなAPIで実装できる。
+**向いているユースケース:** TypeScriptネイティブでAgentを構築しつつ、会話履歴の永続化もフレームワークに任せたい場合。PostgreSQLを既に使っているプロジェクトへの統合が容易。
 
 ---
 
@@ -138,7 +149,7 @@ while (true) {
 
 | フレームワーク | 依存パッケージ数 | 設定ファイル | 学習コスト |
 |---------------|----------------|------------|----------|
-| mastra | 多（@mastra/core は大きなフレームワーク） | package.json + tsconfig | 中 |
+| mastra | 多（@mastra/core + @mastra/memory + @mastra/pg） | package.json + tsconfig | 中（メモリはAPI1行） |
 | mastra-fastify | 同上 | 同上 | やや高（Mastraクラスの理解が必要） |
 | strands-python | 少（strands-agents + anthropic） | pyproject.toml | 低（Pythonらしい書き方） |
 | strands-typescript | 中 | package.json + tsconfig | 中 |

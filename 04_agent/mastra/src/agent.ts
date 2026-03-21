@@ -1,6 +1,12 @@
 import { Agent } from "@mastra/core/agent";
 import { anthropic } from "@ai-sdk/anthropic";
+import { Memory } from "@mastra/memory";
+import { PostgresStore } from "@mastra/pg";
 import { createTaskTool, listTasksTool, updateTaskTool, deleteTaskTool } from "./tools/index.js";
+
+const storage = new PostgresStore({
+  connectionString: process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/mastra",
+});
 
 export const taskAgent = new Agent({
   name: "TaskAgent",
@@ -15,4 +21,5 @@ export const taskAgent = new Agent({
     updateTask: updateTaskTool,
     deleteTask: deleteTaskTool,
   },
+  memory: new Memory({ storage }),
 });

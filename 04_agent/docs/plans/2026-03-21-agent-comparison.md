@@ -4,9 +4,9 @@
 
 **Goal:** 5つのAI Agentフレームワークで同一のタスク管理Agentを実装し、各フレームワークの特性を実践的に比較できる環境を構築する。
 
-**Architecture:** 全フレームワーク共通のタスク管理Agent（ツール4種・スキル2種・Redisメモリ）を実装し、POST /chat エンドポイントで統一的に操作できる。タスクデータはインメモリ管理、会話履歴はRedisに保存する。claude-agent-sdkのみメモリ管理なし。
+**Architecture:** 全フレームワーク共通のタスク管理Agent（ツール4種・スキル2種）を実装し、POST /chat エンドポイントで統一的に操作できる。タスクデータはインメモリ管理。メモリ: mastraはPostgreSQL（Mastra組み込み `@mastra/pg`）、それ以外はRedis（手動管理）、claude-agent-sdkのみメモリなし。
 
-**Tech Stack:** TypeScript（mastra, mastra-fastify, strands-typescript, claude-agent-sdk） / Python（strands-python） / Fastify / FastAPI / Redis / Docker Compose / Vitest / pytest
+**Tech Stack:** TypeScript（mastra, mastra-fastify, strands-typescript, claude-agent-sdk） / Python（strands-python） / Fastify / FastAPI / PostgreSQL（mastra） / Redis（mastra-fastify, strands-*） / Docker Compose / Vitest / pytest
 
 ---
 
@@ -32,15 +32,30 @@ services:
       timeout: 3s
       retries: 5
 
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=mastra
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    profiles: [mastra]
+
   mastra:
     build: ./mastra
     ports:
       - "4001:4001"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/mastra
     depends_on:
-      redis:
+      postgres:
         condition: service_healthy
     profiles: [mastra]
 
@@ -177,6 +192,8 @@ git commit -m "add 04_agent base infrastructure (docker-compose, Makefile, share
 
 **Step 1: package.json を作成する**
 
+mastra は組み込みメモリ（PostgreSQL）を使用するため `@mastra/memory` と `@mastra/pg` を追加する。`ioredis` は不要。
+
 ```json
 {
   "name": "agent-mastra",
@@ -189,8 +206,9 @@ git commit -m "add 04_agent base infrastructure (docker-compose, Makefile, share
   },
   "dependencies": {
     "@mastra/core": "latest",
+    "@mastra/memory": "latest",
+    "@mastra/pg": "latest",
     "@ai-sdk/anthropic": "latest",
-    "ioredis": "^5.4.2",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
@@ -384,11 +402,19 @@ export const summarize = (): string => {
 
 **Step 7: Agent と HTTPサーバーを実装する**
 
+mastra は `@mastra/memory` + `@mastra/pg` を使って PostgreSQL に会話履歴を永続化する。Redis の手動操作は不要。
+
 ```typescript
 // 04_agent/mastra/src/agent.ts
 import { Agent } from "@mastra/core/agent";
 import { anthropic } from "@ai-sdk/anthropic";
+import { Memory } from "@mastra/memory";
+import { PostgresStore } from "@mastra/pg";
 import { createTaskTool, listTasksTool, updateTaskTool, deleteTaskTool } from "./tools/index.js";
+
+const storage = new PostgresStore({
+  connectionString: process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/mastra",
+});
 
 export const taskAgent = new Agent({
   name: "TaskAgent",
@@ -403,53 +429,47 @@ export const taskAgent = new Agent({
     updateTask: updateTaskTool,
     deleteTask: deleteTaskTool,
   },
+  memory: new Memory({ storage }),
 });
 ```
 
 ```typescript
 // 04_agent/mastra/src/index.ts
 import Fastify from "fastify";
-import { Redis } from "ioredis";
 import { taskAgent } from "./agent.js";
 import { prioritize } from "./skills/prioritize.js";
 import { summarize } from "./skills/summarize.js";
 
 const app = Fastify({ logger: true });
-const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
 const PORT = 4001;
 
 app.post<{ Body: { message: string; sessionId: string } }>("/chat", async (req, reply) => {
   const { message, sessionId } = req.body;
 
-  const historyRaw = await redis.get(`session:${sessionId}:history`);
-  const history = historyRaw ? JSON.parse(historyRaw) : [];
-
-  // スキルキーワード検出
   if (message.includes("優先") || message.includes("prioritize")) {
-    const result = prioritize();
-    history.push({ role: "user", content: message }, { role: "assistant", content: result });
-    await redis.set(`session:${sessionId}:history`, JSON.stringify(history));
-    return reply.send({ response: result });
+    return reply.send({ response: prioritize() });
   }
 
   if (message.includes("サマリ") || message.includes("summarize")) {
-    const result = summarize();
-    history.push({ role: "user", content: message }, { role: "assistant", content: result });
-    await redis.set(`session:${sessionId}:history`, JSON.stringify(history));
-    return reply.send({ response: result });
+    return reply.send({ response: summarize() });
   }
 
-  const result = await taskAgent.generate(message, { conversationHistory: history });
-  const response = result.text;
+  // Mastra の組み込みメモリ（PostgreSQL）で会話履歴を自動管理
+  const result = await taskAgent.generate(message, {
+    memory: {
+      resource: "default-user",
+      thread: sessionId,
+    },
+  });
 
-  history.push({ role: "user", content: message }, { role: "assistant", content: response });
-  await redis.set(`session:${sessionId}:history`, JSON.stringify(history));
-
-  return reply.send({ response });
+  return reply.send({ response: result.text });
 });
 
 app.listen({ port: PORT, host: "0.0.0.0" }, (err) => {
-  if (err) throw err;
+  if (err) {
+    app.log.error(err);
+    process.exit(1);
+  }
 });
 ```
 
@@ -470,7 +490,7 @@ CMD ["pnpm", "start"]
 
 ```bash
 git add 04_agent/mastra/
-git commit -m "add mastra agent implementation with task tools and Redis memory"
+git commit -m "add mastra agent implementation with task tools and PostgreSQL memory"
 ```
 
 ---
