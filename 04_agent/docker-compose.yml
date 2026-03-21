@@ -1,0 +1,66 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mastra:
+    build: ./mastra
+    ports:
+      - "4001:4001"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles: [mastra]
+
+  mastra-fastify:
+    build: ./mastra-fastify
+    ports:
+      - "4002:4002"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles: [mastra-fastify]
+
+  strands-python:
+    build: ./strands-python
+    ports:
+      - "4003:4003"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles: [strands-python]
+
+  strands-typescript:
+    build: ./strands-typescript
+    ports:
+      - "4004:4004"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles: [strands-typescript]
+
+  claude-agent-sdk:
+    build: ./claude-agent-sdk
+    ports:
+      - "4005:4005"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    profiles: [claude-agent-sdk]
