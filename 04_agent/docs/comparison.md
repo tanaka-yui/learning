@@ -7,13 +7,13 @@
 | 観点 | mastra | mastra-fastify | strands-python | strands-typescript | claude-agent-sdk |
 |------|--------|----------------|----------------|--------------------|------------------|
 | **言語** | TypeScript | TypeScript | Python | TypeScript | TypeScript |
-| **HTTPサーバー** | Fastify（手動） | Fastify（手動） | FastAPI | Fastify（手動） | Fastify（手動） |
+| **HTTPサーバー** | Mastra組み込み（Hono） | Fastify（手動） | FastAPI | Fastify（手動） | Fastify（手動） |
 | **ポート** | 4001 | 4002 | 4003 | 4004 | 4005 |
 | **ツール定義** | `createTool()` + zodスキーマ | `createTool()` + zodスキーマ | `@tool` デコレータ | `tool()` + zodスキーマ | 手動JSONスキーマ |
 | **スキル管理** | 独自関数 | 独自関数 | 独自関数 | 独自関数 | 独自関数 |
 | **メモリ管理** | PostgreSQL（Mastra組み込み） | Redis（手動） | Redis（手動） | Redis（手動） | なし |
 | **モデル設定** | `anthropic("claude-sonnet-4-6")` | `anthropic("claude-sonnet-4-6")` | `AnthropicModel(model_id=...)` | `new AnthropicModel({modelId: ...})` | `client.messages.create(model=...)` |
-| **Agent構築** | `new Agent({...})` | `new Mastra({agents: {...}})` | `Agent(model=..., tools=[...])` | `new Agent({model, tools, systemPrompt})` | 手動ループ実装 |
+| **Agent構築** | `new Mastra({server, agents})` + `registerApiRoute` | `new Mastra({agents: {...}})` | `Agent(model=..., tools=[...])` | `new Agent({model, tools, systemPrompt})` | 手動ループ実装 |
 | **ツール実行** | フレームワーク自動 | フレームワーク自動 | フレームワーク自動 | フレームワーク自動 | 手動ループ |
 | **型安全性** | ✅ 高い（Zod） | ✅ 高い（Zod） | ✅ Python型ヒント | ✅ 高い（Zod） | ⚠️ 中（手動キャスト） |
 | **セットアップ難易度** | ★★☆ | ★★★ | ★★☆ | ★★☆ | ★☆☆ |
@@ -25,33 +25,40 @@
 **パッケージ:** `@mastra/core` + `@mastra/memory` + `@mastra/pg`
 
 **特徴:**
+- Mastra の**組み込みHTTPサーバー（Hono）**を使用 — Fastify などを手動でセットアップする必要がない
+- `registerApiRoute()` でカスタムエンドポイントを `Mastra` コンストラクタに渡すだけでルートが登録される
 - `createTool()` でZodスキーマベースのツールを定義
-- `Agent` クラスに `memory: new Memory({ storage: new PostgresStore({...}) })` を渡すだけで会話履歴の永続化が完結
-- `agent.generate(message, { memory: { resource, thread } })` で会話履歴の読み書きを自動管理 — Redis の手動操作が不要
-- AI SDK (`@ai-sdk/anthropic`) を通じてAnthropicモデルを使用
-- メモリ: PostgreSQL（ポート5432）
+- `Memory` + `PostgresStore`（`@mastra/pg`）で会話履歴をPostgreSQLに自動永続化
+- `mastra dev` コマンドでサーバーを起動（開発・本番共通）
 
-**メモリ設定の例:**
+**サーバー設定の例:**
 ```typescript
-import { Memory } from "@mastra/memory";
-import { PostgresStore } from "@mastra/pg";
+import { Mastra } from "@mastra/core";
+import { registerApiRoute } from "@mastra/core/server";
+import { taskAgent } from "./agent.js";
 
-export const taskAgent = new Agent({
-  // ...
-  memory: new Memory({
-    storage: new PostgresStore({
-      connectionString: process.env.DATABASE_URL,
-    }),
-  }),
-});
-
-// 呼び出し時に sessionId を thread として渡すだけで自動保存
-const result = await taskAgent.generate(message, {
-  memory: { resource: "default-user", thread: sessionId },
+export const mastra = new Mastra({
+  agents: { taskAgent },
+  server: {
+    port: 4001,
+    host: "0.0.0.0",
+    apiRoutes: [
+      registerApiRoute("/chat", {
+        method: "POST",
+        handler: async (c) => {
+          const { message, sessionId } = await c.req.json();
+          const result = await taskAgent.generate(message, {
+            memory: { resource: "default-user", thread: sessionId },
+          });
+          return c.json({ response: result.text });
+        },
+      }),
+    ],
+  },
 });
 ```
 
-**向いているユースケース:** TypeScriptネイティブでAgentを構築しつつ、会話履歴の永続化もフレームワークに任せたい場合。PostgreSQLを既に使っているプロジェクトへの統合が容易。
+**向いているユースケース:** TypeScriptネイティブでAgentを構築し、HTTPサーバー管理もMastraに任せたい場合。サーバー設定のボイラープレートを最小化できる。PostgreSQLを既に使っているプロジェクトへの統合が容易。
 
 ---
 
@@ -149,8 +156,8 @@ while (true) {
 
 | フレームワーク | 依存パッケージ数 | 設定ファイル | 学習コスト |
 |---------------|----------------|------------|----------|
-| mastra | 多（@mastra/core + @mastra/memory + @mastra/pg） | package.json + tsconfig | 中（メモリはAPI1行） |
-| mastra-fastify | 同上 | 同上 | やや高（Mastraクラスの理解が必要） |
+| mastra | 多（@mastra/core + @mastra/memory + @mastra/pg） | package.json + tsconfig | 中（組み込みサーバー + メモリ自動管理） |
+| mastra-fastify | 同上 + fastify | 同上 | やや高（Mastraクラス + Fastify配線の理解が必要） |
 | strands-python | 少（strands-agents + anthropic） | pyproject.toml | 低（Pythonらしい書き方） |
 | strands-typescript | 中 | package.json + tsconfig | 中 |
 | claude-agent-sdk | 最小（@anthropic-ai/sdk のみ） | package.json + tsconfig | 低（SDKのみ学習すればよい） |
@@ -159,8 +166,8 @@ while (true) {
 
 | 用途 | 推奨フレームワーク |
 |------|----------------|
-| TypeScriptで素早くAgent開発 | **mastra** |
-| 複数Agentのオーケストレーション | **mastra-fastify** |
+| サーバー管理も含めてMastraに任せたい | **mastra** |
+| 既存Fastifyアプリへの統合・複数Agentのオーケストレーション | **mastra-fastify** |
 | Pythonエコシステムとの統合 | **strands-python** |
 | Python↔TypeScriptの設計共有 | **strands-typescript** |
 | 最小依存・完全制御 | **claude-agent-sdk** |

@@ -8,7 +8,7 @@
 
 | フレームワーク | 言語 | ポート |
 |---------------|------|--------|
-| mastra | TypeScript | 4001 |
+| mastra（組み込みサーバー） | TypeScript | 4001 |
 | mastra/core + fastify | TypeScript | 4002 |
 | strands-agents/sdk-python + fastapi | Python | 4003 |
 | strands-agents/sdk-typescript + fastify | TypeScript | 4004 |
@@ -53,7 +53,7 @@
 │   │   ├── tools/
 │   │   ├── skills/
 │   │   ├── agent.ts
-│   │   └── index.ts
+│   │   └── mastra.ts          # Mastra組み込みサーバー（registerApiRoute）
 │   ├── Dockerfile
 │   └── package.json
 ├── mastra-fastify/            # Port 4002
@@ -110,10 +110,12 @@ Response: { "response": string }
 
 ## データフロー
 
-### mastra（PostgreSQL メモリ）
+### mastra（組み込みサーバー + PostgreSQL メモリ）
 
 ```
-POST /chat
+mastra dev（Mastra組み込みHonoサーバーが起動）
+  ↓
+POST /chat  ← registerApiRoute で登録したカスタムルート
   ↓
 スキルキーワード判定（優先/summarize等）
   ├── 該当: スキル関数を直接実行して返却

@@ -4,7 +4,7 @@
 
 **Goal:** 5つのAI Agentフレームワークで同一のタスク管理Agentを実装し、各フレームワークの特性を実践的に比較できる環境を構築する。
 
-**Architecture:** 全フレームワーク共通のタスク管理Agent（ツール4種・スキル2種）を実装し、POST /chat エンドポイントで統一的に操作できる。タスクデータはインメモリ管理。メモリ: mastraはPostgreSQL（Mastra組み込み `@mastra/pg`）、それ以外はRedis（手動管理）、claude-agent-sdkのみメモリなし。
+**Architecture:** 全フレームワーク共通のタスク管理Agent（ツール4種・スキル2種）を実装し、POST /chat エンドポイントで統一的に操作できる。タスクデータはインメモリ管理。サーバー: mastraはMastra組み込みHonoサーバー（`registerApiRoute`）、それ以外はFastify/FastAPIを手動設定。メモリ: mastraはPostgreSQL（`@mastra/pg`）、mastra-fastify/strands-*はRedis（手動管理）、claude-agent-sdkのみなし。
 
 **Tech Stack:** TypeScript（mastra, mastra-fastify, strands-typescript, claude-agent-sdk） / Python（strands-python） / Fastify / FastAPI / PostgreSQL（mastra） / Redis（mastra-fastify, strands-*） / Docker Compose / Vitest / pytest
 
@@ -179,6 +179,8 @@ git commit -m "add 04_agent base infrastructure (docker-compose, Makefile, share
 
 ## Task 2: mastra 実装
 
+Mastraの組み込みHTTPサーバー（Hono）を使用する。Fastifyは不要。`registerApiRoute` でカスタムルートを定義し、`mastra dev` でサーバーを起動する。
+
 **Files:**
 - Create: `04_agent/mastra/package.json`
 - Create: `04_agent/mastra/tsconfig.json`
@@ -186,13 +188,13 @@ git commit -m "add 04_agent base infrastructure (docker-compose, Makefile, share
 - Create: `04_agent/mastra/src/skills/prioritize.ts`
 - Create: `04_agent/mastra/src/skills/summarize.ts`
 - Create: `04_agent/mastra/src/agent.ts`
-- Create: `04_agent/mastra/src/index.ts`
+- Create: `04_agent/mastra/src/mastra.ts`  ← Fastify index.ts の代わりに Mastra インスタンス
 - Create: `04_agent/mastra/src/__tests__/tools.test.ts`
 - Create: `04_agent/mastra/Dockerfile`
 
 **Step 1: package.json を作成する**
 
-mastra は組み込みメモリ（PostgreSQL）を使用するため `@mastra/memory` と `@mastra/pg` を追加する。`ioredis` は不要。
+mastra は組み込みサーバー（Hono）を使用するため `fastify` は不要。`mastra` CLIパッケージで `mastra dev` を起動する。メモリは `@mastra/memory` + `@mastra/pg`。
 
 ```json
 {
@@ -200,8 +202,7 @@ mastra は組み込みメモリ（PostgreSQL）を使用するため `@mastra/me
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
+    "dev": "mastra dev --port 4001",
     "test": "vitest run"
   },
   "dependencies": {
@@ -209,11 +210,12 @@ mastra は組み込みメモリ（PostgreSQL）を使用するため `@mastra/me
     "@mastra/memory": "latest",
     "@mastra/pg": "latest",
     "@ai-sdk/anthropic": "latest",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/uuid": "^10.0.0",
-    "tsx": "^4.19.3",
+    "mastra": "latest",
     "typescript": "^5.8.3",
     "vitest": "^3.1.1"
   }
@@ -400,9 +402,9 @@ export const summarize = (): string => {
 };
 ```
 
-**Step 7: Agent と HTTPサーバーを実装する**
+**Step 7: Agent と Mastra サーバーを実装する**
 
-mastra は `@mastra/memory` + `@mastra/pg` を使って PostgreSQL に会話履歴を永続化する。Redis の手動操作は不要。
+Fastify は使わない。`src/mastra.ts` に `Mastra` インスタンスを作成し、`registerApiRoute` でカスタムルートを登録する。`mastra dev` がこのファイルを自動的に読み込んで組み込みHonoサーバーを起動する。
 
 ```typescript
 // 04_agent/mastra/src/agent.ts
@@ -417,6 +419,7 @@ const storage = new PostgresStore({
 });
 
 export const taskAgent = new Agent({
+  id: "task-agent",
   name: "TaskAgent",
   instructions: `あなたはタスク管理エージェントです。
 ユーザーのタスク管理を支援します。
@@ -434,46 +437,47 @@ export const taskAgent = new Agent({
 ```
 
 ```typescript
-// 04_agent/mastra/src/index.ts
-import Fastify from "fastify";
+// 04_agent/mastra/src/mastra.ts  ← Fastify の index.ts ではなく Mastra インスタンス
+import { Mastra } from "@mastra/core";
+import { registerApiRoute } from "@mastra/core/server";
 import { taskAgent } from "./agent.js";
 import { prioritize } from "./skills/prioritize.js";
 import { summarize } from "./skills/summarize.js";
 
-const app = Fastify({ logger: true });
-const PORT = 4001;
+export const mastra = new Mastra({
+  agents: { taskAgent },
+  server: {
+    host: "0.0.0.0",
+    apiRoutes: [
+      registerApiRoute("/chat", {
+        method: "POST",
+        handler: async (c) => {
+          const { message, sessionId } = await c.req.json<{ message: string; sessionId: string }>();
 
-app.post<{ Body: { message: string; sessionId: string } }>("/chat", async (req, reply) => {
-  const { message, sessionId } = req.body;
+          if (message.includes("優先") || message.includes("prioritize")) {
+            return c.json({ response: prioritize() });
+          }
 
-  if (message.includes("優先") || message.includes("prioritize")) {
-    return reply.send({ response: prioritize() });
-  }
+          if (message.includes("サマリ") || message.includes("summarize")) {
+            return c.json({ response: summarize() });
+          }
 
-  if (message.includes("サマリ") || message.includes("summarize")) {
-    return reply.send({ response: summarize() });
-  }
+          // Mastra の組み込みメモリ（PostgreSQL）で会話履歴を自動管理
+          const result = await taskAgent.generate(message, {
+            memory: { resource: "default-user", thread: sessionId },
+          });
 
-  // Mastra の組み込みメモリ（PostgreSQL）で会話履歴を自動管理
-  const result = await taskAgent.generate(message, {
-    memory: {
-      resource: "default-user",
-      thread: sessionId,
-    },
-  });
-
-  return reply.send({ response: result.text });
-});
-
-app.listen({ port: PORT, host: "0.0.0.0" }, (err) => {
-  if (err) {
-    app.log.error(err);
-    process.exit(1);
-  }
+          return c.json({ response: result.text });
+        },
+      }),
+    ],
+  },
 });
 ```
 
 **Step 8: Dockerfile を作成する**
+
+`mastra dev` コマンドでサーバーを起動する。ポートは環境変数 `PORT` で制御する。
 
 ```dockerfile
 # 04_agent/mastra/Dockerfile
@@ -483,14 +487,15 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-CMD ["pnpm", "start"]
+ENV PORT=4001
+CMD ["pnpm", "dev"]
 ```
 
 **Step 9: コミット**
 
 ```bash
 git add 04_agent/mastra/
-git commit -m "add mastra agent implementation with task tools and PostgreSQL memory"
+git commit -m "add mastra agent implementation with built-in Hono server and PostgreSQL memory"
 ```
 
 ---
