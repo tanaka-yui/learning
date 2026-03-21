@@ -19,4 +19,4 @@ all:
 	docker compose --profile mastra --profile mastra-fastify --profile strands-python --profile strands-typescript --profile claude-agent-sdk up --build
 
 down:
-	docker compose down
+	docker compose --profile mastra --profile mastra-fastify --profile strands-python --profile strands-typescript --profile claude-agent-sdk down
