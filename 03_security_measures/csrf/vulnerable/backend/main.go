@@ -45,9 +45,13 @@ func generateSessionID() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-// CORSヘッダーを設定する（意図的に脆弱な設定）
-func setCORSHeaders(w http.ResponseWriter) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+// CORSヘッダーを設定する（意図的に脆弱な設定: リクエスト元のオリジンを無条件で許可）
+func setCORSHeaders(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		origin = "*"
+	}
+	w.Header().Set("Access-Control-Allow-Origin", origin)
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -67,7 +71,7 @@ func getUserFromSession(r *http.Request) (string, bool) {
 
 // ログインハンドラー: 認証情報を検証しセッションを作成する
 func handleLogin(w http.ResponseWriter, r *http.Request) {
-	setCORSHeaders(w)
+	setCORSHeaders(w, r)
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -120,7 +124,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 
 // パスワード変更ハンドラー: CSRFトークン検証なし（意図的に脆弱）
 func handleChangePassword(w http.ResponseWriter, r *http.Request) {
-	setCORSHeaders(w)
+	setCORSHeaders(w, r)
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -159,7 +163,7 @@ func handleChangePassword(w http.ResponseWriter, r *http.Request) {
 
 // ユーザー情報取得ハンドラー: セッションCookieに基づく
 func handleMe(w http.ResponseWriter, r *http.Request) {
-	setCORSHeaders(w)
+	setCORSHeaders(w, r)
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -183,7 +187,7 @@ func handleMe(w http.ResponseWriter, r *http.Request) {
 
 // ログアウトハンドラー: セッションを破棄する
 func handleLogout(w http.ResponseWriter, r *http.Request) {
-	setCORSHeaders(w)
+	setCORSHeaders(w, r)
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)

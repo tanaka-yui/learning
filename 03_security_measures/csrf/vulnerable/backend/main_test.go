@@ -220,10 +220,10 @@ func TestCSRFVulnerability_CrossOriginWithCookieSucceeds(t *testing.T) {
 		t.Errorf("CSRF脆弱性テスト: 異なるオリジンからのリクエストが成功するはず。期待 200, 実際 %d", resp.StatusCode)
 	}
 
-	// CORSヘッダーが許可的に設定されていることを確認する
+	// CORSヘッダーが許可的に設定されていることを確認する（リクエスト元のオリジンをそのまま返す）
 	allowOrigin := resp.Header.Get("Access-Control-Allow-Origin")
-	if allowOrigin != "*" {
-		t.Errorf("Access-Control-Allow-Originが '*' であるべき, 実際 '%s'", allowOrigin)
+	if allowOrigin != "http://evil-site.com" {
+		t.Errorf("Access-Control-Allow-Originがリクエスト元のオリジンであるべき, 実際 '%s'", allowOrigin)
 	}
 
 	allowCreds := resp.Header.Get("Access-Control-Allow-Credentials")
