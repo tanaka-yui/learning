@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 
-const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL as string) || "http://localhost:4002";
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL as string) || "http://localhost:4003";
 const THEME_COLOR = (import.meta.env.VITE_THEME_COLOR as string) || "#6366f1";
 const FRAMEWORK_NAME = (import.meta.env.VITE_FRAMEWORK_NAME as string) || "Agent";
 const SESSION_ID = uuidv4();
