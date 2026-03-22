@@ -25,7 +25,7 @@ services:
     profiles: [mastra]
 
   mastra:
-    build: ./mastra
+    build: ./mastra/backend
     ports:
       - "4001:4001"
     environment:
@@ -37,7 +37,7 @@ services:
     profiles: [mastra]
 
   mastra-fastify:
-    build: ./mastra-fastify
+    build: ./mastra-fastify/backend
     ports:
       - "4002:4002"
     environment:
@@ -49,7 +49,7 @@ services:
     profiles: [mastra-fastify]
 
   strands-python:
-    build: ./strands-python
+    build: ./strands-python/backend
     ports:
       - "4003:4003"
     environment:
@@ -61,7 +61,7 @@ services:
     profiles: [strands-python]
 
   strands-typescript:
-    build: ./strands-typescript
+    build: ./strands-typescript/backend
     ports:
       - "4004:4004"
     environment:
@@ -73,7 +73,7 @@ services:
     profiles: [strands-typescript]
 
   claude-agent-sdk:
-    build: ./claude-agent-sdk
+    build: ./claude-agent-sdk/backend
     ports:
       - "4005:4005"
     environment:
