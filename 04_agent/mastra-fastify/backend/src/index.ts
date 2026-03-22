@@ -1,10 +1,12 @@
 import Fastify from "fastify";
+import cors from "@fastify/cors";
 import { Redis } from "ioredis";
 import { mastra } from "./agent.js";
 import { prioritize } from "./skills/prioritize.js";
 import { summarize } from "./skills/summarize.js";
 
 const app = Fastify({ logger: true });
+await app.register(cors, { origin: true });
 const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
 const PORT = 4002;
 

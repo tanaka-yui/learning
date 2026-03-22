@@ -1,6 +1,7 @@
 import os
 import json
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import redis.asyncio as aioredis
 from agent import create_agent
@@ -8,6 +9,13 @@ from skills.prioritize import prioritize
 from skills.summarize import summarize
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 redis_client = aioredis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"))
 
 

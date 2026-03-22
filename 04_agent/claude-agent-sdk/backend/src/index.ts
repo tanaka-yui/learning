@@ -1,9 +1,11 @@
 import Fastify from "fastify";
+import cors from "@fastify/cors";
 import { runAgent } from "./agent.js";
 import { prioritize } from "./skills/prioritize.js";
 import { summarize } from "./skills/summarize.js";
 
 const app = Fastify({ logger: true });
+await app.register(cors, { origin: true });
 const PORT = 4005;
 
 // メモリなし: sessionIdは受け取るが会話履歴は保存しない

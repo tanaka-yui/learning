@@ -8,6 +8,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fastify/cors": "^11.2.0",
     "@strands-agents/sdk": "latest",
     "fastify": "^5.0.0",
     "ioredis": "^5.4.2",
