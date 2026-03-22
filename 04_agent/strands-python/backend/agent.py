@@ -1,8 +1,8 @@
 from strands import Agent
-from strands.models.anthropic import AnthropicModel
+from strands.models.bedrock import BedrockModel
 from tools.task_tools import create_task, list_tasks, update_task, delete_task
 
-model = AnthropicModel(model_id="claude-sonnet-4-6")
+model = BedrockModel(model_id="anthropic.claude-sonnet-4-6-20251001-v1:0")
 
 SYSTEM_PROMPT = """あなたはタスク管理エージェントです。
 ユーザーのタスク管理を支援します。

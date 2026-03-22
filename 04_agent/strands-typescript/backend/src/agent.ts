@@ -1,10 +1,11 @@
 import { Agent } from "@strands-agents/sdk";
-import { AnthropicModel } from "@strands-agents/sdk/models/anthropic";
+import { BedrockModel } from "@strands-agents/sdk/models/bedrock";
 import { createTaskTool, listTasksTool, updateTaskTool, deleteTaskTool } from "./tools/index.js";
 import type { MessageData } from "@strands-agents/sdk";
 
-const model = new AnthropicModel({
-  modelId: "claude-sonnet-4-6",
+const model = new BedrockModel({
+  modelId: "anthropic.claude-sonnet-4-6-20251001-v1:0",
+  region: process.env.AWS_REGION ?? "us-east-1",
 });
 
 const SYSTEM_PROMPT = `あなたはタスク管理エージェントです。

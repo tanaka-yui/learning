@@ -8,7 +8,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "latest",
+    "@ai-sdk/amazon-bedrock": "^4.0.82",
     "@fastify/cors": "^11.2.0",
     "@mastra/core": "latest",
     "fastify": "^5.0.0",

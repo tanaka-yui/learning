@@ -44,8 +44,11 @@ services:
     ports:
       - "4002:4002"
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_PROFILE=${AWS_PROFILE:-default}
       - REDIS_URL=redis://redis:6379
+    volumes:
+      - ${HOME}/.aws:/root/.aws:ro
     depends_on:
       redis:
         condition: service_healthy
@@ -56,8 +59,11 @@ services:
     ports:
       - "4003:4003"
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_PROFILE=${AWS_PROFILE:-default}
       - REDIS_URL=redis://redis:6379
+    volumes:
+      - ${HOME}/.aws:/root/.aws:ro
     depends_on:
       redis:
         condition: service_healthy
@@ -68,8 +74,11 @@ services:
     ports:
       - "4004:4004"
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_PROFILE=${AWS_PROFILE:-default}
       - REDIS_URL=redis://redis:6379
+    volumes:
+      - ${HOME}/.aws:/root/.aws:ro
     depends_on:
       redis:
         condition: service_healthy
@@ -80,7 +89,10 @@ services:
     ports:
       - "4005:4005"
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_PROFILE=${AWS_PROFILE:-default}
+    volumes:
+      - ${HOME}/.aws:/root/.aws:ro
     profiles: [claude-agent-sdk]
 
   mastra-frontend:
