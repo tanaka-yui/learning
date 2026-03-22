@@ -7,7 +7,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "latest",
+    "@ai-sdk/amazon-bedrock": "^4.0.82",
     "@mastra/core": "latest",
     "@mastra/memory": "^1.9.0",
     "@mastra/pg": "^1.8.2",
