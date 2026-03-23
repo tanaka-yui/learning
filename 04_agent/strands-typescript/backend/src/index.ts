@@ -1,51 +1,36 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
-import { Redis } from "ioredis";
 import { createAgent } from "./agent.js";
-import { prioritize } from "./skills/prioritize.js";
-import { summarize } from "./skills/summarize.js";
-import type { MessageData } from "@strands-agents/sdk";
+import { readFileSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: true });
-const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
 const PORT = 4004;
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const readSkill = (skillName: string): string => {
+  const skillPath = join(__dirname, "../skills", skillName, "SKILL.md");
+  return readFileSync(skillPath, "utf-8");
+};
+
 app.post<{ Body: { message: string; sessionId: string } }>("/chat", async (req, reply) => {
-  const { message, sessionId } = req.body;
+  const { message } = req.body;
 
-  const historyRaw = await redis.get(`session:${sessionId}:history`);
-  const history: MessageData[] = historyRaw ? JSON.parse(historyRaw) : [];
-
+  // strands-agentsはメモリ機能を持たない
+  // 会話履歴の永続化にはAmazon Bedrock AgentCore Memoryが必要
+  let prompt = message;
   if (message.includes("優先") || message.includes("prioritize")) {
-    const result = prioritize();
-    history.push(
-      { role: "user", content: [{ text: message }] },
-      { role: "assistant", content: [{ text: result }] }
-    );
-    await redis.set(`session:${sessionId}:history`, JSON.stringify(history));
-    return reply.send({ response: result });
+    prompt = readSkill("prioritize");
+  } else if (message.includes("サマリ") || message.includes("summarize")) {
+    prompt = readSkill("summarize");
   }
 
-  if (message.includes("サマリ") || message.includes("summarize")) {
-    const result = summarize();
-    history.push(
-      { role: "user", content: [{ text: message }] },
-      { role: "assistant", content: [{ text: result }] }
-    );
-    await redis.set(`session:${sessionId}:history`, JSON.stringify(history));
-    return reply.send({ response: result });
-  }
-
-  const agent = createAgent(history.length > 0 ? history : undefined);
-  const result = await agent.invoke(message);
+  const agent = createAgent();
+  const result = await agent.invoke(prompt);
   const response = result.toString();
-
-  history.push(
-    { role: "user", content: [{ text: message }] },
-    { role: "assistant", content: [{ text: response }] }
-  );
-  await redis.set(`session:${sessionId}:history`, JSON.stringify(history));
 
   return reply.send({ response });
 });

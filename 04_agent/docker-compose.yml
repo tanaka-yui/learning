@@ -1,14 +1,4 @@
 services:
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
   postgres:
     image: postgres:16-alpine
     ports:
@@ -22,7 +12,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-    profiles: [mastra]
+    profiles: [mastra, mastra-fastify]
 
   mastra:
     build: ./mastra/backend
@@ -31,9 +21,13 @@ services:
     environment:
       - AWS_REGION=${AWS_REGION:-us-east-1}
       - AWS_PROFILE=${AWS_PROFILE:-default}
+      - AWS_PROVIDER=${AWS_PROVIDER:-sso}
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/mastra
+      - WORKSPACE_BASE_PATH=/app
     volumes:
       - ${HOME}/.aws:/root/.aws:ro
+      - ./mastra/backend:/app
+      - /app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,11 +40,15 @@ services:
     environment:
       - AWS_REGION=${AWS_REGION:-us-east-1}
       - AWS_PROFILE=${AWS_PROFILE:-default}
-      - REDIS_URL=redis://redis:6379
+      - AWS_PROVIDER=${AWS_PROVIDER:-sso}
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/mastra
+      - WORKSPACE_BASE_PATH=/app
     volumes:
       - ${HOME}/.aws:/root/.aws:ro
+      - ./mastra-fastify/backend:/app
+      - /app/node_modules
     depends_on:
-      redis:
+      postgres:
         condition: service_healthy
     profiles: [mastra-fastify]
 
@@ -61,12 +59,10 @@ services:
     environment:
       - AWS_REGION=${AWS_REGION:-us-east-1}
       - AWS_PROFILE=${AWS_PROFILE:-default}
-      - REDIS_URL=redis://redis:6379
     volumes:
       - ${HOME}/.aws:/root/.aws:ro
-    depends_on:
-      redis:
-        condition: service_healthy
+      - ./strands-python/backend:/app
+      - /app/.venv
     profiles: [strands-python]
 
   strands-typescript:
@@ -76,12 +72,10 @@ services:
     environment:
       - AWS_REGION=${AWS_REGION:-us-east-1}
       - AWS_PROFILE=${AWS_PROFILE:-default}
-      - REDIS_URL=redis://redis:6379
     volumes:
       - ${HOME}/.aws:/root/.aws:ro
-    depends_on:
-      redis:
-        condition: service_healthy
+      - ./strands-typescript/backend:/app
+      - /app/node_modules
     profiles: [strands-typescript]
 
   claude-agent-sdk:
@@ -93,6 +87,8 @@ services:
       - AWS_PROFILE=${AWS_PROFILE:-default}
     volumes:
       - ${HOME}/.aws:/root/.aws:ro
+      - ./claude-agent-sdk/backend:/app
+      - /app/node_modules
     profiles: [claude-agent-sdk]
 
   mastra-frontend:
@@ -101,6 +97,9 @@ services:
       - "5001:5001"
     environment:
       - VITE_BACKEND_URL=http://localhost:4001
+    volumes:
+      - ./mastra/frontend:/app
+      - /app/node_modules
     depends_on:
       - mastra
     profiles: [mastra]
@@ -113,6 +112,9 @@ services:
       - VITE_BACKEND_URL=http://localhost:4002
       - VITE_THEME_COLOR=#8b5cf6
       - VITE_FRAMEWORK_NAME=mastra-fastify
+    volumes:
+      - ./mastra-fastify/frontend:/app
+      - /app/node_modules
     depends_on:
       - mastra-fastify
     profiles: [mastra-fastify]
@@ -125,6 +127,9 @@ services:
       - VITE_BACKEND_URL=http://localhost:4003
       - VITE_THEME_COLOR=#3b82f6
       - VITE_FRAMEWORK_NAME=strands-python
+    volumes:
+      - ./strands-python/frontend:/app
+      - /app/node_modules
     depends_on:
       - strands-python
     profiles: [strands-python]
@@ -137,6 +142,9 @@ services:
       - VITE_BACKEND_URL=http://localhost:4004
       - VITE_THEME_COLOR=#06b6d4
       - VITE_FRAMEWORK_NAME=strands-typescript
+    volumes:
+      - ./strands-typescript/frontend:/app
+      - /app/node_modules
     depends_on:
       - strands-typescript
     profiles: [strands-typescript]
@@ -149,6 +157,9 @@ services:
       - VITE_BACKEND_URL=http://localhost:4005
       - VITE_THEME_COLOR=#f97316
       - VITE_FRAMEWORK_NAME=claude-agent-sdk
+    volumes:
+      - ./claude-agent-sdk/frontend:/app
+      - /app/node_modules
     depends_on:
       - claude-agent-sdk
     profiles: [claude-agent-sdk]

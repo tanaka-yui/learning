@@ -1,8 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
-import AnthropicBedrock from "@anthropic-ai/sdk/bedrock";
+import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
 import { createTask, listTasks, updateTask, deleteTask } from "./tools/taskTools.js";
 
-const client = new AnthropicBedrock();
+const client = new AnthropicBedrock({
+  awsRegion: "us-east-1",
+});
 
 const toolDefinitions: Anthropic.Tool[] = [
   {
@@ -73,7 +75,7 @@ export const runAgent = async (message: string): Promise<string> => {
 
   while (true) {
     const response = await client.messages.create({
-      model: "anthropic.claude-sonnet-4-6-20251001-v1:0",
+      model: "us.anthropic.claude-sonnet-4-6",
       max_tokens: 4096,
       system: "あなたはタスク管理エージェントです。ユーザーのタスク管理を支援します。",
       tools: toolDefinitions,

@@ -29,8 +29,7 @@ export default function App() {
     setLoading(true);
     try {
       const agent = client.getAgent("task-agent");
-      const result = await agent.generate({
-        messages: [{ role: "user", content: userMsg }],
+      const result = await agent.generate([{ role: "user", content: userMsg }],{
         resourceId: "default-user",
         threadId: SESSION_ID,
       });

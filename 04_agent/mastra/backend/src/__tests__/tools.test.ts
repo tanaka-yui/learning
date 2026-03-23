@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { taskStore, createTask, listTasks, updateTask, deleteTask } from "../tools/taskTools.js";
+import { taskStore, createTask, listTasks, updateTask, deleteTask } from "../mastra/agents/tools/taskTools.js";
 
 describe("taskTools", () => {
   beforeEach(() => {

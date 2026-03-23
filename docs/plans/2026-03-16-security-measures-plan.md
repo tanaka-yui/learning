@@ -279,7 +279,7 @@ React + Viteプロジェクト。以下のUI:
 **Step 3: 各 Dockerfile 作成**
 
 ```dockerfile
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN corepack enable && pnpm install --frozen-lockfile

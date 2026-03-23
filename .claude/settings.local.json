@@ -32,8 +32,35 @@
       "Bash(go build:*)",
       "Bash(go:*)",
       "Bash(do sed:*)",
-      "Bash(do echo:*)"
-    ]
+      "Bash(do echo:*)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/sql-injection/vulnerable/frontend && corepack enable && pnpm install)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/sql-injection/secure/frontend && corepack enable && pnpm install)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/xss/vulnerable/frontend && corepack enable && pnpm install 2>&1 | tail -5)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/xss/secure/frontend && corepack enable && pnpm install 2>&1 | tail -5)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/csrf/vulnerable/frontend && corepack enable && pnpm install)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/csrf/secure/frontend && corepack enable && pnpm install)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/csrf/vulnerable/frontend && npx tsc -b 2>&1)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/csrf/secure/frontend && npx tsc -b 2>&1)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/auth-bypass/vulnerable/frontend && corepack enable && pnpm install 2>&1 | tail -5)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/auth-bypass/secure/frontend && corepack enable && pnpm install 2>&1 | tail -5)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/auth-bypass/vulnerable/frontend && pnpm build 2>&1)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/auth-bypass/secure/frontend && pnpm build 2>&1)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/path-traversal/vulnerable/frontend && pnpm install)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/path-traversal/secure/frontend && pnpm install)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/path-traversal/vulnerable/frontend && npx tsc -b 2>&1)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/path-traversal/secure/frontend && npx tsc -b 2>&1)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/command-injection/vulnerable/frontend && pnpm install 2>&1)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/command-injection/secure/frontend && pnpm install 2>&1)",
+      "Bash(cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures && for dir in sql-injection/vulnerable/backend sql-injection/secure/backend xss/vulnerable/backend xss/secure/backend csrf/vulnerable/backend csrf/secure/backend auth-bypass/vulnerable/backend auth-bypass/secure/backend path-traversal/vulnerable/backend path-traversal/secure/backend command-injection/vulnerable/backend command-injection/secure/backend; do echo \"=== Testing $dir ===\" && cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures/$dir && go test ./... 2>&1 | tail -1 && cd /Users/yui/Documents/workspace/tanaka-yui/learning/03_security_measures; done)",
+      "Bash(python3:*)",
+      "Bash(npm show:*)",
+      "Bash(npm pack:*)",
+      "Bash(npx --yes jsr-json @mastra/core)",
+      "WebFetch(domain:mastra.ai)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(pnpm install:*)"
+    ],
+    "defaultMode": "bypassPermissions"
   },
   "plansDirectory": "./claude/plans"
 }
