@@ -1,4 +1,4 @@
-.PHONY: mastra mastra-fastify strands-python strands-typescript claude-agent-sdk all down
+.PHONY: mastra mastra-fastify strands-python strands-typescript claude-agent-sdk voltagent all down
 
 mastra:
 	docker compose --profile mastra up --build
@@ -15,8 +15,11 @@ strands-typescript:
 claude-agent-sdk:
 	docker compose --profile claude-agent-sdk up --build
 
+voltagent:
+	docker compose --profile voltagent up --build
+
 all:
-	docker compose --profile mastra --profile mastra-fastify --profile strands-python --profile strands-typescript --profile claude-agent-sdk up --build
+	docker compose --profile mastra --profile mastra-fastify --profile strands-python --profile strands-typescript --profile claude-agent-sdk --profile voltagent up --build
 
 down:
-	docker compose --profile mastra --profile mastra-fastify --profile strands-python --profile strands-typescript --profile claude-agent-sdk down
+	docker compose --profile mastra --profile mastra-fastify --profile strands-python --profile strands-typescript --profile claude-agent-sdk --profile voltagent down

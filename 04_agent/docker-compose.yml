@@ -163,3 +163,31 @@ services:
     depends_on:
       - claude-agent-sdk
     profiles: [claude-agent-sdk]
+
+  voltagent:
+    build: ./voltagent/backend
+    ports:
+      - "4006:4006"
+    environment:
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_PROFILE=${AWS_PROFILE:-default}
+    volumes:
+      - ${HOME}/.aws:/root/.aws:ro
+      - ./voltagent/backend:/app
+      - /app/node_modules
+    profiles: [voltagent]
+
+  voltagent-frontend:
+    build: ./voltagent/frontend
+    ports:
+      - "5006:5006"
+    environment:
+      - VITE_BACKEND_URL=http://localhost:4006
+      - VITE_THEME_COLOR=#10b981
+      - VITE_FRAMEWORK_NAME=voltagent
+    volumes:
+      - ./voltagent/frontend:/app
+      - /app/node_modules
+    depends_on:
+      - voltagent
+    profiles: [voltagent]

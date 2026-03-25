@@ -4,20 +4,51 @@
 
 ## 比較表
 
-| 観点 | mastra | mastra-fastify | strands-python | strands-typescript | claude-agent-sdk |
-|------|--------|----------------|----------------|--------------------|------------------|
-| **言語** | TypeScript | TypeScript | Python | TypeScript | TypeScript |
-| **HTTPサーバー** | Mastra組み込み（Hono） | Fastify（手動） | FastAPI（手動）| Fastify（手動） | Fastify（手動） |
-| **バックエンドポート** | 4001 | 4002 | 4003 | 4004 | 4005 |
-| **フロントエンドポート** | 5001 | 5002 | 5003 | 5004 | 5005 |
-| **ツール定義** | `createTool()` + zodスキーマ | `createTool()` + zodスキーマ | `@tool` デコレータ | `tool()` + zodスキーマ | 手動JSONスキーマ |
-| **スキル管理** | `Workspace` + `LocalFilesystem` | `Workspace` + `LocalFilesystem` | `AgentSkills` プラグイン | 手動ファイル読み込み | 手動ファイル読み込み |
-| **メモリ管理** | `@mastra/memory` + PostgreSQL | `@mastra/memory` + PostgreSQL | なし（AgentCore Memory必須） | なし（AgentCore Memory必須） | なし |
-| **モデル設定** | `createAmazonBedrock()(modelId)` | `createAmazonBedrock()(modelId)` | `BedrockModel(model_id=...)` | `new BedrockModel({modelId: ...})` | `new AnthropicBedrock()` |
-| **Agent構築** | `new Mastra({server, agents})` | `new Mastra({agents})` + Fastify | `Agent(model=..., tools=[...], plugins=[...])` | `new Agent({model, tools, systemPrompt})` | 手動ループ実装 |
-| **ツール実行** | フレームワーク自動 | フレームワーク自動 | フレームワーク自動 | フレームワーク自動 | 手動ループ |
-| **型安全性** | ✅ 高い（Zod） | ✅ 高い（Zod） | ✅ Python型ヒント | ✅ 高い（Zod） | ⚠️ 中（手動キャスト） |
-| **セットアップ難易度** | ★★☆ | ★★★ | ★★☆ | ★★☆ | ★☆☆ |
+| 観点 | mastra | mastra-fastify | strands-python | strands-typescript | claude-agent-sdk | voltagent |
+|------|--------|----------------|----------------|--------------------|------------------|-----------|
+| **言語** | TypeScript | TypeScript | Python | TypeScript | TypeScript | TypeScript |
+| **HTTPサーバー** | Mastra組み込み（Hono） | Fastify（手動） | FastAPI（手動）| Fastify（手動） | Fastify（手動） | VoltAgent組み込み（Hono） |
+| **バックエンドポート** | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 |
+| **フロントエンドポート** | 5001 | 5002 | 5003 | 5004 | 5005 | 5006 |
+| **ツール定義** | `createTool()` + zodスキーマ | `createTool()` + zodスキーマ | `@tool` デコレータ | `tool()` + zodスキーマ | 手動JSONスキーマ | `createTool()` + zodスキーマ |
+| **スキル管理** | `Workspace` + `LocalFilesystem` | `Workspace` + `LocalFilesystem` | `AgentSkills` プラグイン | 手動ファイル読み込み | 手動ファイル読み込み | Toolkitsでグループ化 |
+| **メモリ管理** | `@mastra/memory` + PostgreSQL | `@mastra/memory` + PostgreSQL | なし（AgentCore Memory必須） | なし（AgentCore Memory必須） | なし | 6プロバイダー対応（InMemory / PostgreSQL / LibSQL等）+ Semantic Search |
+| **モデル設定** | `createAmazonBedrock()(modelId)` | `createAmazonBedrock()(modelId)` | `BedrockModel(model_id=...)` | `new BedrockModel({modelId: ...})` | `new AnthropicBedrock()` | `createAmazonBedrock()(modelId)`（AI SDK経由） |
+| **Agent構築** | `new Mastra({server, agents})` | `new Mastra({agents})` + Fastify | `Agent(model=..., tools=[...], plugins=[...])` | `new Agent({model, tools, systemPrompt})` | 手動ループ実装 | `new VoltAgent({agents, server})` |
+| **ツール実行** | フレームワーク自動 | フレームワーク自動 | フレームワーク自動 | フレームワーク自動 | 手動ループ | フレームワーク自動 |
+| **型安全性** | ✅ 高い（Zod） | ✅ 高い（Zod） | ✅ Python型ヒント | ✅ 高い（Zod） | ⚠️ 中（手動キャスト） | ✅ 高い（Zod） |
+| **セットアップ難易度** | ★★☆ | ★★★ | ★★☆ | ★★☆ | ★☆☆ | ★★☆ |
+| **Observability** | Mastra Studio / Cloud + OTel + Langfuse等 | Mastra Studio / Cloud + OTel + Langfuse等 | OTelネイティブ + Jaeger / Langfuse等 | OTelネイティブ + Jaeger / Langfuse等 | Hooks経由で自作 | VoltOps Console + Langfuse + MLflow |
+
+## Observability比較
+
+AIエージェントの実行トレース・モニタリング・デバッグに関するフレームワークごとの対応状況。
+
+| 機能 | mastra | strands | claude-agent-sdk | voltagent |
+|---|:---:|:---:|:---:|:---:|
+| **ビルトイントレーシング** | ✅ | ✅（OTelネイティブ） | ❌（手動） | ✅（VoltOps） |
+| **OpenTelemetry対応** | ✅（GenAI Conventions準拠） | ✅（ネイティブ） | ❌ | ✅ |
+| **トークン使用量追跡** | ✅ 自動 | ✅ 自動（キャッシュトークン含む） | ❌ | ✅ |
+| **専用ダッシュボード** | Mastra Studio / Mastra Cloud | なし（外部ツール） | なし | VoltOps Console |
+| **評価（Evals）** | Mastra Scorers（3種類） | GenAI Evaluation | ❌ | ✅ |
+| **機密データマスキング** | ✅ SensitiveDataFilter | ❌ | ❌ | ❌ |
+
+### 対応連携先
+
+- **mastra**: Langfuse / MLflow / Braintrust / Datadog / New Relic / SigNoz / Dash0 / Traceloop / Laminar + 任意OTel互換プラットフォーム
+- **strands**: Langfuse / Jaeger / AWS X-Ray / Zipkin / Opik / Grafana Tempo / Datadog / Arize AI + 任意OTel互換プラットフォーム
+- **claude-agent-sdk**: コミュニティツール（[claude_telemetry](https://github.com/TechNickAI/claude_telemetry)）経由で Logfire / Sentry / Honeycomb / Datadog
+- **voltagent**: Langfuse / MLflow + 任意OTel互換プラットフォーム
+
+### 各フレームワークの特徴
+
+**mastra** — Observabilityが最も統合的。Mastra Studio（ローカル）/Mastra Cloud（本番）という専用UIを持ち、公式でLangfuse・OTelエクスポーターをサポート。評価（Evals）機能も内蔵し、機密データの自動マスキングも提供する。
+
+**strands** — OpenTelemetryネイティブ統合が最も深い。`Agent Span → Cycle Span → LLM Span → Tool Span` の階層トレースとキャッシュトークンを含む詳細なメトリクスが特徴。専用UIはなく、Jaeger等の外部ツールと組み合わせて使う。
+
+**claude-agent-sdk** — ビルトインObservabilityなし。Hooksシステムとメッセージストリームで手動モニタリングするアプローチ。コミュニティツール `claude_telemetry` でOTel互換基盤への統合が可能。
+
+**voltagent** — VoltOps Consoleで実行トレース・パフォーマンスをリアルタイム可視化。Langfuse / MLflow との公式連携も提供。
 
 ## 各フレームワークの詳細
 
@@ -118,6 +149,27 @@
 - フレームワークに依存せず、Agentの動作を完全に制御したい場合
 - 学習目的やカスタム動作が必要な場合
 - 依存関係を最小限にしたい場合
+
+---
+
+### voltagent
+
+**パッケージ:** `@voltagent/core` + `@voltagent/server-hono` + `@ai-sdk/amazon-bedrock`
+
+**特徴:**
+- TypeScriptファーストのAIエージェントフレームワーク。Vercel AI SDK上に構築されており、`createAmazonBedrock()(modelId)` でBedrockモデルをそのまま渡せる
+- `new VoltAgent({ agents, server: honoServer({ port }) })` だけでHTTPサーバーとルーティングが完結する（Mastraと同様のアプローチ）
+- `createTool()` + Zodスキーマでツールを定義。APIはMastraの `createTool()` と非常に類似
+- 6種類のメモリプロバイダー（InMemory / PostgreSQL / LibSQL / Supabase等）に加え、Semantic SearchとWorking Memoryをサポート
+- Supervisorパターンによるマルチエージェント（`subAgents` + `delegate_task` ツールの自動生成）
+- **VoltOps Console** でエージェントの実行トレース・パフォーマンスをリアルタイム可視化。Langfuse / MLflow との公式連携も提供
+
+→ [`voltagent/backend/src/index.ts`](./voltagent/backend/src/index.ts) / [`voltagent/backend/src/agent.ts`](./voltagent/backend/src/agent.ts)
+
+**向いているユースケース:**
+- Observabilityを重視するプロダクション向けAgent開発
+- MastraライクなAPIでObservability機能・Voice・Guardrailsが最初から揃っている環境が必要な場合
+- マルチエージェントのオーケストレーションをシンプルに実装したい場合
 
 ## 参考
 
