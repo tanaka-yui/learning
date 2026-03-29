@@ -89,3 +89,97 @@ INSERT INTO orders VALUES (2, '鈴木 一郎', 'バター');
 **まだ残っている問題点:**
 - `customer` が `order_id` だけでなく `item` にも依存しているように見える（実際は `order_id` だけで決まる）
 - → **部分関数従属**が存在する（2NF違反）
+
+## 4. 第2正規形（2NF）
+
+### 定義
+
+1NFを満たし、かつ**部分関数従属が存在しない**状態。
+すべての非キー列が**主キー全体**に依存している。
+
+> **部分関数従属**: 複合主キーの一部だけで非キー列が決まること。
+
+### 違反例
+
+```sql
+-- 2NF違反: 複合主キー (order_id, product_id) のうち
+-- product_id だけで product_name が決まる（部分関数従属）
+CREATE TABLE order_items_bad (
+    order_id     INT,
+    product_id   INT,
+    product_name VARCHAR(100),  -- product_id だけで決まる → 部分従属
+    quantity     INT,
+    PRIMARY KEY (order_id, product_id)
+);
+```
+
+**問題点:**
+- 商品名を変更するとき、その商品を含む全行を更新する必要がある（更新異常）
+- 商品情報だけを登録することができない（挿入異常）
+
+### 2NFに変換後
+
+```sql
+-- 商品テーブルを分離する
+CREATE TABLE products (
+    product_id   INT PRIMARY KEY,
+    product_name VARCHAR(100)
+);
+
+CREATE TABLE order_items (
+    order_id    INT,
+    product_id  INT REFERENCES products(product_id),
+    quantity    INT,
+    PRIMARY KEY (order_id, product_id)
+);
+```
+
+**まだ残っている問題点:**
+- 非キー列が他の非キー列に依存している場合（推移関数従属）はまだ残っている
+- → **推移関数従属**が存在する可能性（3NF違反）
+
+---
+
+## 5. 第3正規形（3NF）
+
+### 定義
+
+2NFを満たし、かつ**推移関数従属が存在しない**状態。
+すべての非キー列が**主キーにのみ**直接依存している。
+
+> **推移関数従属**: 非キー列Aが非キー列Bを通じて主キーに依存すること（主キー → B → A）。
+
+### 違反例
+
+```sql
+-- 3NF違反: order_id → staff_id → staff_name という推移従属
+CREATE TABLE orders_bad (
+    order_id    INT PRIMARY KEY,
+    customer_id INT,
+    staff_id    INT,
+    staff_name  VARCHAR(100),  -- staff_id で決まる → 推移従属
+    order_date  DATE
+);
+```
+
+**問題点:**
+- スタッフ名が変わったとき、そのスタッフが担当した全注文を更新する必要がある
+- スタッフ情報だけを登録できない
+
+### 3NFに変換後
+
+```sql
+CREATE TABLE staff (
+    staff_id   INT PRIMARY KEY,
+    staff_name VARCHAR(100)
+);
+
+CREATE TABLE orders (
+    order_id    INT PRIMARY KEY,
+    customer_id INT,
+    staff_id    INT REFERENCES staff(staff_id),
+    order_date  DATE
+);
+```
+
+これで更新異常・挿入異常・削除異常がすべて解消されます。
