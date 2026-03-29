@@ -183,3 +183,143 @@ CREATE TABLE orders (
 ```
 
 これで更新異常・挿入異常・削除異常がすべて解消されます。
+
+## 6. ボイス・コッド正規形（BCNF）
+
+### 定義
+
+3NFの強化版。すべての**決定項（関数従属の左辺）が候補キー**である状態。
+
+3NFを満たしていてもBCNFを満たさないケースが稀にある。
+
+### 3NFを満たすがBCNF違反の例
+
+```sql
+-- 前提: 生徒は複数の科目を履修し、各科目は1人の教師が担当
+-- 候補キー: (student_id, subject) または (student_id, teacher_id)
+-- 関数従属: teacher_id → subject（教師が決まると科目が決まる）
+--           しかし teacher_id は候補キーではない → BCNF違反
+
+CREATE TABLE enrollments_bad (
+    student_id INT,
+    subject    VARCHAR(100),
+    teacher_id INT,
+    -- teacher_id → subject だが teacher_id は候補キーでない
+    PRIMARY KEY (student_id, subject)
+);
+```
+
+### BCNFに変換後
+
+```sql
+CREATE TABLE teacher_subjects (
+    teacher_id INT PRIMARY KEY,
+    subject    VARCHAR(100)
+);
+
+CREATE TABLE enrollments (
+    student_id INT,
+    teacher_id INT REFERENCES teacher_subjects(teacher_id),
+    PRIMARY KEY (student_id, teacher_id)
+);
+```
+
+---
+
+## 7. 第4〜第7正規形
+
+これらは理論的な上位正規形です。実務で意識することは稀ですが、概念として知っておくと役立ちます。
+
+### 第4正規形（4NF）
+
+**多値従属性**を排除した状態。
+
+> 多値従属性: 主キーAに対して、BとCが互いに独立して複数の値を持つ場合（A →→ B かつ A →→ C）。
+
+```sql
+-- 違反例: 人が複数の趣味と複数のスキルを持つ場合
+-- hobby と skill は独立しているのに1テーブルに混在している
+CREATE TABLE person_hobbies_skills_bad (
+    person_id INT,
+    hobby     VARCHAR(100),
+    skill     VARCHAR(100),
+    PRIMARY KEY (person_id, hobby, skill)
+);
+
+-- 4NF準拠: テーブルを分割する
+CREATE TABLE person_hobbies (
+    person_id INT,
+    hobby     VARCHAR(100),
+    PRIMARY KEY (person_id, hobby)
+);
+
+CREATE TABLE person_skills (
+    person_id INT,
+    skill     VARCHAR(100),
+    PRIMARY KEY (person_id, skill)
+);
+```
+
+### 第5正規形（5NF）
+
+**結合従属性**を排除した状態。テーブルをどのように分割しても、JOINで元に戻せる状態。
+4NFより制約が厳しく、実務での適用は非常にまれ。
+
+### 第6正規形（6NF）
+
+**時制データ**（有効期間を持つデータ）を扱うための正規形。
+例: 商品の価格が期間ごとに変わる場合に、時間軸を独立した軸として扱う。
+
+```sql
+-- 6NF的な考え方: 期間を明示的に管理する
+CREATE TABLE product_prices (
+    product_id  INT,
+    valid_from  DATE,
+    valid_to    DATE,
+    price       NUMERIC,
+    PRIMARY KEY (product_id, valid_from)
+);
+```
+
+### DKNF / 第7正規形
+
+- **DKNF（ドメイン・キー正規形）**: すべての制約がドメイン制約またはキー制約から導出できる状態。理論的な到達点。
+- **7NF**: 6NFを時制データの観点でさらに拡張したもの。学術的な概念。
+
+---
+
+## 8. 非正規化
+
+### 目的
+
+意図的に正規化を崩し、**クエリのパフォーマンスを向上させる**テクニック。
+
+### メリット・デメリット
+
+| | 内容 |
+|---|------|
+| **メリット** | JOINが減り、クエリがシンプルになる |
+| | 読み取りパフォーマンスが向上する |
+| **デメリット** | データの冗長性が生まれる |
+| | 更新時に複数箇所を同期する必要がある |
+| | 整合性の維持がアプリケーション側の責任になる |
+
+### 適用場面
+
+- **分析系クエリ（OLAP）**: 集計・レポート用のテーブルで読み取りを最優先にする場合
+- **キャッシュテーブル**: 計算済みの集計値を別テーブルに保持する
+- **高トラフィックな読み取り**: 大量アクセスに対してJOINのコストを下げたい場合
+
+```sql
+-- 非正規化の例: 注文テーブルに顧客名を直接持つ
+-- （正規化では customers テーブルをJOINするところを、コピーして持つ）
+CREATE TABLE orders_denormalized (
+    order_id       INT PRIMARY KEY,
+    customer_id    INT,
+    customer_name  VARCHAR(100),  -- customers テーブルからコピー（冗長）
+    order_total    NUMERIC,       -- 明細の合計を事前計算（冗長）
+    order_date     DATE
+);
+```
+
+> **実務の指針**: まず正規化して設計し、パフォーマンス問題が実際に発生したときに限り、計測しながら非正規化を検討する。
