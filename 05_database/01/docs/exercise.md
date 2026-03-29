@@ -161,7 +161,7 @@ CREATE TABLE receipt_items_2nf (
 - スタッフ名の変更は `staff` テーブルの1行を更新するだけ
 
 **まだ残っている問題点:**
-- `products` テーブルで `category` の詳細情報（例: カテゴリの説明）を追加したい場合、`product_name → category` という推移従属が潜在している
+- `products` テーブルで `product_id → category`、かつ将来 `category → category_description` などの属性を追加すると推移関数従属（`product_id → category → category_description`）が生じる
 - → **推移関数従属（3NF違反）**の可能性
 
 ---
