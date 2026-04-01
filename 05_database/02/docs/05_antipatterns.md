@@ -13,6 +13,24 @@
 
 投稿のタグをカンマ区切りで1つのカラムに格納する。
 
+**テーブル定義（posts — タグをカンマ区切りで持つ場合）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| id | UUID (UUIDv7) | 投稿ID（主キー） |
+| user_id | UUID | 投稿者のユーザーID（FK → users） |
+| content | TEXT | 投稿本文 |
+| tags | TEXT | タグ（カンマ区切り、例: `'旅行,グルメ,写真'`） |
+| created_at | TIMESTAMPTZ | 投稿日時 |
+
+サンプルデータ:
+
+| id | user_id | content | tags | created_at |
+|----|---------|---------|------|------------|
+| 01906b1a-... | 01905a3b-... | 京都旅行の写真です | 旅行,写真,京都 | 2025-10-01 09:00:00+09 |
+| 01906b1b-... | 01905a3c-... | 新しいカフェを発見 | グルメ,カフェ | 2025-10-01 11:30:00+09 |
+| 01906b1c-... | 01905a3d-... | 今日のランニング記録 | NULL | 2025-10-02 14:00:00+09 |
+
 ```sql
 CREATE TABLE posts (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -35,18 +53,57 @@ SELECT * FROM posts WHERE tags LIKE '%旅行%';
 
 hashtags マスタテーブルと hashtag_posts 中間テーブルで正規化する。
 
-```sql
--- 現在のスキーマ
-CREATE TABLE hashtags (
-    id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(100) NOT NULL UNIQUE
-);
+**テーブル定義（hashtags — タグマスタ）:**
 
-CREATE TABLE hashtag_posts (
-    hashtag_id UUID NOT NULL REFERENCES hashtags(id),
-    post_id    UUID NOT NULL REFERENCES posts(id),
-    PRIMARY KEY (hashtag_id, post_id)
-);
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| id | UUID (UUIDv7) | タグID（主キー） |
+| name | VARCHAR(100) | タグ名（ユニーク） |
+| created_at | TIMESTAMPTZ | 作成日時 |
+
+サンプルデータ:
+
+| id | name | created_at |
+|----|------|------------|
+| 01907c1a-... | 旅行 | 2025-06-01 00:00:00+09 |
+| 01907c1b-... | グルメ | 2025-06-01 00:00:00+09 |
+| 01907c1c-... | 写真 | 2025-06-01 00:00:00+09 |
+
+**テーブル定義（hashtag_posts — 投稿とタグの紐付け）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| hashtag_id | UUID | タグID（PK・FK → hashtags） |
+| post_id | UUID | 投稿ID（PK・FK → posts） |
+| created_at | TIMESTAMPTZ | 紐付け日時 |
+
+サンプルデータ:
+
+| hashtag_id | post_id | created_at |
+|------------|---------|------------|
+| 01907c1a-... (旅行) | 01906b1a-... | 2025-10-01 09:00:00+09 |
+| 01907c1c-... (写真) | 01906b1a-... | 2025-10-01 09:00:00+09 |
+| 01907c1b-... (グルメ) | 01906b1b-... | 2025-10-01 11:30:00+09 |
+
+```mermaid
+erDiagram
+    posts ||--o{ hashtag_posts : "1つの投稿に0以上のタグ"
+    hashtags ||--o{ hashtag_posts : "1つのタグに0以上の投稿"
+
+    posts {
+        UUID id PK
+        UUID user_id FK
+        TEXT content
+        TIMESTAMPTZ created_at
+    }
+    hashtags {
+        UUID id PK
+        VARCHAR name
+    }
+    hashtag_posts {
+        UUID hashtag_id PK
+        UUID post_id PK
+    }
 ```
 
 ```sql
@@ -76,6 +133,26 @@ WHERE  h.name = '旅行';
 ### ❌ アンチパターン
 
 タグを固定数のカラムで持つ。
+
+**テーブル定義（posts — タグを固定カラムで持つ場合）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| id | UUID (UUIDv7) | 投稿ID（主キー） |
+| user_id | UUID | 投稿者のユーザーID（FK → users） |
+| content | TEXT | 投稿本文 |
+| tag1 | VARCHAR(100) | タグ1（NULL可） |
+| tag2 | VARCHAR(100) | タグ2（NULL可） |
+| tag3 | VARCHAR(100) | タグ3（NULL可） |
+| created_at | TIMESTAMPTZ | 投稿日時 |
+
+サンプルデータ:
+
+| id | user_id | content | tag1 | tag2 | tag3 | created_at |
+|----|---------|---------|------|------|------|------------|
+| 01906b1a-... | 01905a3b-... | 京都旅行の写真です | 旅行 | 写真 | 京都 | 2025-10-01 09:00:00+09 |
+| 01906b1b-... | 01905a3c-... | 新しいカフェを発見 | グルメ | カフェ | NULL | 2025-10-01 11:30:00+09 |
+| 01906b1c-... | 01905a3d-... | 今日のランニング記録 | NULL | NULL | NULL | 2025-10-02 14:00:00+09 |
 
 ```sql
 CREATE TABLE posts (
@@ -127,6 +204,24 @@ INSERT INTO hashtag_posts (hashtag_id, post_id) VALUES
 
 ユーザーの属性を汎用的な key-value 形式で格納する。
 
+**テーブル定義（user_attributes — EAV 方式）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| user_id | UUID | ユーザーID（PK・FK → users） |
+| attribute_name | VARCHAR(100) | 属性名（PK、例: `'display_name'`） |
+| attribute_value | TEXT | 属性値（型に関わらず全て TEXT） |
+
+サンプルデータ:
+
+| user_id | attribute_name | attribute_value |
+|---------|---------------|----------------|
+| 01905a3b-... | display_name | 田中 花子 |
+| 01905a3b-... | bio | 日常のことをつぶやきます。 |
+| 01905a3b-... | website | https://example.com |
+| 01905a3c-... | display_name | 鈴木 一郎 |
+| 01905a3c-... | bio | 技術ブログも書いています。 |
+
 ```sql
 CREATE TABLE user_attributes (
     user_id         UUID NOT NULL REFERENCES users(id),
@@ -134,16 +229,10 @@ CREATE TABLE user_attributes (
     attribute_value TEXT,
     PRIMARY KEY (user_id, attribute_name)
 );
-
--- データ例
-INSERT INTO user_attributes VALUES
-    (:'user_id', 'display_name', '田中 花子'),
-    (:'user_id', 'bio',          '日常のことをつぶやきます。'),
-    (:'user_id', 'website',      'https://example.com');
 ```
 
 ```sql
--- display_name を取得するだけで JOIN が必要
+-- display_name を取得するだけで WHERE 句に属性名の指定が必要
 SELECT ua.attribute_value AS display_name
 FROM   user_attributes ua
 WHERE  ua.user_id = :'user_id'
@@ -154,15 +243,22 @@ AND    ua.attribute_name = 'display_name';
 
 users テーブルに直接カラムを定義する。
 
-```sql
--- 現在のスキーマ
-CREATE TABLE users (
-    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    display_name VARCHAR(100) NOT NULL,
-    bio          TEXT,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-```
+**テーブル定義（users — カラムを直接定義）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| id | UUID (UUIDv7) | ユーザーID（主キー） |
+| display_name | VARCHAR(100) | 表示名 |
+| bio | TEXT | プロフィール文（NULL可） |
+| created_at | TIMESTAMPTZ | 登録日時 |
+
+サンプルデータ:
+
+| id | display_name | bio | created_at |
+|----|-------------|-----|------------|
+| 01905a3b-... | 田中 花子 | 日常のことをつぶやきます。 | 2025-06-15 09:23:00+09 |
+| 01905a3c-... | 鈴木 一郎 | 技術ブログも書いています。 | 2025-07-02 14:05:00+09 |
+| 01905a3d-... | 佐藤 美咲 | NULL | 2025-08-20 18:44:00+09 |
 
 ```sql
 -- シンプルにカラムを参照するだけ
@@ -188,22 +284,45 @@ SELECT display_name, bio FROM users WHERE id = :'user_id';
 
 投稿とリプライの両方に対するリアクションを1テーブルにまとめる。
 
-```sql
-CREATE TABLE reactions (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    target_type   VARCHAR(20) NOT NULL, -- 'post' or 'reply'
-    target_id     UUID NOT NULL,        -- posts.id または post_replies.id
-    user_id       UUID NOT NULL REFERENCES users(id),
-    reaction_type VARCHAR(20) NOT NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+**テーブル定義（reactions — ポリモーフィック方式）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| id | UUID (UUIDv7) | リアクションID（主キー） |
+| target_type | VARCHAR(20) | 対象の種類（`'post'` または `'reply'`） |
+| target_id | UUID | 対象のID（posts.id **または** post_replies.id） |
+| user_id | UUID | リアクションしたユーザーID（FK → users） |
+| reaction_type | VARCHAR(20) | リアクション種別（`'like'`, `'stamp'` 等） |
+| created_at | TIMESTAMPTZ | リアクション日時 |
+
+サンプルデータ:
+
+| id | target_type | target_id | user_id | reaction_type | created_at |
+|----|------------|-----------|---------|--------------|------------|
+| 01908a1a-... | post | 01906b1a-... | 01905a3c-... | like | 2025-10-01 10:00:00+09 |
+| 01908a1b-... | post | 01906b1a-... | 01905a3d-... | stamp | 2025-10-01 10:05:00+09 |
+| 01908a1c-... | reply | 01907d1a-... | 01905a3b-... | like | 2025-10-01 11:00:00+09 |
+
+```mermaid
+erDiagram
+    reactions {
+        UUID id PK
+        VARCHAR target_type "post or reply"
+        UUID target_id "FK先が不明"
+        UUID user_id FK
+    }
+    posts {
+        UUID id PK
+    }
+    post_replies {
+        UUID id PK
+    }
+    users ||--o{ reactions : "リアクション"
+    reactions }o..o| posts : "target_type=postの場合"
+    reactions }o..o| post_replies : "target_type=replyの場合"
 ```
 
 ```sql
--- 投稿のリアクションを取得するには target_type の指定が必要
-SELECT * FROM reactions
-WHERE target_type = 'post' AND target_id = :'post_id';
-
 -- JOINする場合は CASE 文が必要
 SELECT r.*, COALESCE(p.content, pr.content) AS target_content
 FROM   reactions r
@@ -215,23 +334,48 @@ LEFT JOIN post_replies pr ON r.target_type = 'reply' AND r.target_id = pr.id;
 
 対象テーブルごとにリアクションテーブルを分離する。
 
-```sql
--- 現在のスキーマ: 投稿へのいいね
-CREATE TABLE post_favorites (
-    post_id    UUID NOT NULL REFERENCES posts(id),
-    user_id    UUID NOT NULL REFERENCES users(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (post_id, user_id)
-);
+**テーブル定義（post_favorites — 投稿へのいいね）:**
 
--- 現在のスキーマ: 投稿へのスタンプ
-CREATE TABLE post_stamps (
-    post_id    UUID NOT NULL REFERENCES posts(id),
-    stamp_id   UUID NOT NULL REFERENCES stamps(id),
-    user_id    UUID NOT NULL REFERENCES users(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (post_id, stamp_id, user_id)
-);
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| post_id | UUID | 投稿ID（PK・FK → posts） |
+| user_id | UUID | ユーザーID（PK・FK → users） |
+| created_at | TIMESTAMPTZ | いいね日時 |
+
+**テーブル定義（post_stamps — 投稿へのスタンプ）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| post_id | UUID | 投稿ID（PK・FK → posts） |
+| stamp_id | UUID | スタンプID（PK・FK → stamps） |
+| user_id | UUID | ユーザーID（PK・FK → users） |
+| created_at | TIMESTAMPTZ | スタンプ日時 |
+
+サンプルデータ（post_favorites）:
+
+| post_id | user_id | created_at |
+|---------|---------|------------|
+| 01906b1a-... | 01905a3c-... | 2025-10-01 10:00:00+09 |
+| 01906b1a-... | 01905a3d-... | 2025-10-01 10:05:00+09 |
+| 01906b1b-... | 01905a3b-... | 2025-10-01 12:30:00+09 |
+
+```mermaid
+erDiagram
+    users ||--o{ post_favorites : "いいね"
+    posts ||--o{ post_favorites : "いいねされる"
+    users ||--o{ post_stamps : "スタンプ"
+    posts ||--o{ post_stamps : "スタンプされる"
+    stamps ||--o{ post_stamps : "スタンプ種別"
+
+    post_favorites {
+        UUID post_id PK
+        UUID user_id PK
+    }
+    post_stamps {
+        UUID post_id PK
+        UUID stamp_id PK
+        UUID user_id PK
+    }
 ```
 
 ### なぜダメなのか
@@ -253,6 +397,24 @@ CREATE TABLE post_stamps (
 
 follows テーブルに REFERENCES を付けない。
 
+**テーブル定義（follows — FK制約なし）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| user_id | UUID | フォローするユーザーのID（**REFERENCES なし**） |
+| follow_user_id | UUID | フォローされるユーザーのID（**REFERENCES なし**） |
+| created_at | TIMESTAMPTZ | フォロー日時 |
+
+サンプルデータ:
+
+| user_id | follow_user_id | created_at |
+|---------|---------------|------------|
+| 01905a3b-... | 01905a3c-... | 2025-07-10 10:00:00+09 |
+| 01905a3b-... | **00000000-0000-...** | 2025-08-05 15:30:00+09 |
+| **00000000-0000-...** | 01905a3b-... | 2025-09-01 12:00:00+09 |
+
+> ⚠️ **太字** の UUID は存在しないユーザー。FK制約がないためエラーにならず INSERT できてしまう。
+
 ```sql
 CREATE TABLE follows (
     user_id        UUID NOT NULL, -- REFERENCES なし
@@ -262,28 +424,34 @@ CREATE TABLE follows (
 );
 ```
 
-```sql
--- 存在しないユーザーへのフォローが INSERT できてしまう
-INSERT INTO follows (user_id, follow_user_id, created_at)
-VALUES ('00000000-0000-0000-0000-000000000000',
-        '00000000-0000-0000-0000-000000000001',
-        NOW());
--- → エラーにならない！
-```
-
 ### ✅ 正しい設計
 
 全ての外部キーに REFERENCES と CHECK 制約を設定する。
 
-```sql
--- 現在のスキーマ
-CREATE TABLE follows (
-    user_id        UUID NOT NULL REFERENCES users(id),
-    follow_user_id UUID NOT NULL REFERENCES users(id),
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (user_id, follow_user_id),
-    CHECK (user_id <> follow_user_id)
-);
+**テーブル定義（follows — FK制約あり）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| user_id | UUID | フォローするユーザーID（PK・FK → users） |
+| follow_user_id | UUID | フォローされるユーザーID（PK・FK → users） |
+| created_at | TIMESTAMPTZ | フォロー日時 |
+
+> CHECK制約: `user_id <> follow_user_id`（自分自身のフォローを防止）
+
+```mermaid
+erDiagram
+    users ||--o{ follows : "フォローする"
+    users ||--o{ follows : "フォローされる"
+
+    users {
+        UUID id PK
+        VARCHAR display_name
+    }
+    follows {
+        UUID user_id PK
+        UUID follow_user_id PK
+        TIMESTAMPTZ created_at
+    }
 ```
 
 ```sql
@@ -313,6 +481,27 @@ VALUES ('00000000-0000-0000-0000-000000000000',
 
 中間テーブルに不要なサロゲートキーを追加する。
 
+**テーブル定義（follows — 不要なサロゲートキー付き）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| id | SERIAL | 連番ID（**不要な**主キー） |
+| user_id | UUID | フォローするユーザーのID（FK → users） |
+| follow_user_id | UUID | フォローされるユーザーのID（FK → users） |
+| created_at | TIMESTAMPTZ | フォロー日時 |
+
+> UNIQUE(user_id, follow_user_id) を忘れると重複フォローが可能に…
+
+サンプルデータ:
+
+| id | user_id | follow_user_id | created_at |
+|----|---------|---------------|------------|
+| 1 | 01905a3b-... | 01905a3c-... | 2025-07-10 10:00:00+09 |
+| 2 | 01905a3b-... | 01905a3d-... | 2025-08-05 15:30:00+09 |
+| **3** | **01905a3b-...** | **01905a3c-...** | **2025-09-01 12:00:00+09** |
+
+> ⚠️ id=1 と id=3 は同じ (user_id, follow_user_id) のペア。UNIQUE 制約を付け忘れると重複レコードが生まれる。
+
 ```sql
 CREATE TABLE follows (
     id             SERIAL PRIMARY KEY,  -- 不要なサロゲートキー
@@ -323,19 +512,21 @@ CREATE TABLE follows (
 );
 ```
 
-```sql
--- 同じペアで複数回 INSERT してしまうリスク（UNIQUE 制約を忘れた場合）
-INSERT INTO follows (user_id, follow_user_id) VALUES (:'uid', :'fid');
-INSERT INTO follows (user_id, follow_user_id) VALUES (:'uid', :'fid');
--- → UNIQUE を付け忘れると重複レコードが生まれる
-```
-
 ### ✅ 正しい設計
 
 中間テーブルは複合主キーで設計する。
 
+**テーブル定義（follows — 複合主キー）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| user_id | UUID | フォローするユーザーID（PK・FK → users） |
+| follow_user_id | UUID | フォローされるユーザーID（PK・FK → users） |
+| created_at | TIMESTAMPTZ | フォロー日時 |
+
+> PRIMARY KEY (user_id, follow_user_id) だけで一意性が保証される。
+
 ```sql
--- 現在のスキーマ
 CREATE TABLE follows (
     user_id        UUID NOT NULL REFERENCES users(id),
     follow_user_id UUID NOT NULL REFERENCES users(id),
@@ -395,7 +586,7 @@ CREATE INDEX idx_posts_user_id ON posts(user_id);
 - **オプティマイザが混乱する**: 似たようなインデックスが複数あると、プランナーがどれを使うか判断に迷い、かえって非最適な実行計画を選ぶことがある
 - TEXT カラムへの B-tree インデックスは前方一致以外では使われず、無駄になる
 
-> 💡 インデックスは「EXPLAIN ANALYZE で Seq Scan がボトルネックになっている箇所」にだけ追加するのが鉄則です。02_indexing.md の内容を復習しましょう。
+> 💡 インデックスは「EXPLAIN ANALYZE で Seq Scan がボトルネックになっている箇所」にだけ追加するのが鉄則です。[02_indexing.md](02_indexing.md) の内容を復習しましょう。
 
 ---
 
@@ -441,7 +632,7 @@ ON users(is_active, created_at DESC);
 - **オプティマイザが無視する**: PostgreSQL のプランナーはコストを見積もり、インデックスを使うより Seq Scan の方が安いと判断する
 - インデックスのストレージだけが無駄に消費される
 
-> 💡 02_indexing.md で学んだ部分インデックス（`WHERE deleted_at IS NULL`）を使えば、低カーディナリティのカラムでもインデックスを有効活用できます。
+> 💡 [02_indexing.md](02_indexing.md) で学んだ部分インデックス（`WHERE deleted_at IS NULL`）を使えば、低カーディナリティのカラムでもインデックスを有効活用できます。
 
 ---
 
@@ -453,15 +644,38 @@ ON users(is_active, created_at DESC);
 
 リプライにスレッド構造（リプライへのリプライ）を持たせる場合に、`parent_reply_id` だけで木構造を表現する。
 
-```sql
-CREATE TABLE post_replies (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    post_id         UUID NOT NULL REFERENCES posts(id),
-    parent_reply_id UUID REFERENCES post_replies(id), -- 親リプライ
-    user_id         UUID NOT NULL REFERENCES users(id),
-    content         TEXT NOT NULL,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+**テーブル定義（post_replies — 隣接リスト方式）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| id | UUID (UUIDv7) | コメントID（主キー） |
+| post_id | UUID | 投稿ID（FK → posts） |
+| parent_reply_id | UUID | 親リプライID（FK → post_replies、NULL=ルート） |
+| user_id | UUID | コメントしたユーザーID（FK → users） |
+| content | TEXT | コメント本文 |
+| created_at | TIMESTAMPTZ | コメント日時 |
+
+サンプルデータ（スレッドの例）:
+
+| id | post_id | parent_reply_id | user_id | content | created_at |
+|----|---------|----------------|---------|---------|------------|
+| 01907d1a-... | 01906b1a-... | NULL | 01905a3c-... | いい写真ですね！ | 2025-10-01 10:00:00+09 |
+| 01907d1b-... | 01906b1a-... | 01907d1a-... | 01905a3b-... | ありがとう！ | 2025-10-01 10:05:00+09 |
+| 01907d1c-... | 01906b1a-... | 01907d1b-... | 01905a3d-... | 私も行きたい！ | 2025-10-01 10:10:00+09 |
+| 01907d1d-... | 01906b1a-... | 01907d1c-... | 01905a3c-... | 一緒に行こう！ | 2025-10-01 10:15:00+09 |
+
+```mermaid
+erDiagram
+    posts ||--o{ post_replies : "投稿へのリプライ"
+    post_replies ||--o{ post_replies : "リプライへのリプライ（自己参照）"
+
+    post_replies {
+        UUID id PK
+        UUID post_id FK
+        UUID parent_reply_id FK "自己参照"
+        UUID user_id FK
+        TEXT content
+    }
 ```
 
 ```sql
@@ -485,16 +699,15 @@ SELECT * FROM thread;
 
 現在の post_replies は投稿に対する1階層のリプライに限定しており、この問題を回避している。
 
-```sql
--- 現在のスキーマ: parent_reply_id を持たない（1階層のリプライのみ）
-CREATE TABLE post_replies (
-    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    post_id    UUID NOT NULL REFERENCES posts(id),
-    user_id    UUID NOT NULL REFERENCES users(id),
-    content    TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-```
+**テーブル定義（post_replies — フラット方式）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| id | UUID (UUIDv7) | コメントID（主キー） |
+| post_id | UUID | 投稿ID（FK → posts） |
+| user_id | UUID | コメントしたユーザーID（FK → users） |
+| content | TEXT | コメント本文 |
+| created_at | TIMESTAMPTZ | コメント日時 |
 
 ```sql
 -- 投稿のリプライ一覧は単純な SELECT で取得できる
@@ -530,9 +743,24 @@ ORDER BY created_at;
 
 posts テーブルに `deleted_at` カラムを追加して論理削除する。
 
-```sql
-ALTER TABLE posts ADD COLUMN deleted_at TIMESTAMPTZ;
-```
+**テーブル定義（posts — 論理削除カラム付き）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| id | UUID (UUIDv7) | 投稿ID（主キー） |
+| user_id | UUID | 投稿者のユーザーID（FK → users） |
+| content | TEXT | 投稿本文 |
+| created_at | TIMESTAMPTZ | 投稿日時 |
+| deleted_at | TIMESTAMPTZ | 削除日時（NULL = 有効、値あり = 削除済み） |
+
+サンプルデータ:
+
+| id | user_id | content | created_at | deleted_at |
+|----|---------|---------|------------|------------|
+| 01906b1a-... | 01905a3b-... | 今日は天気が良いですね！ | 2025-10-01 09:00:00+09 | NULL |
+| 01906b1b-... | 01905a3c-... | 間違えて投稿しました | 2025-10-01 11:30:00+09 | **2025-10-01 11:35:00+09** |
+| 01906b1c-... | 01905a3d-... | 京都旅行の写真を整理中 | 2025-10-02 14:00:00+09 | NULL |
+| 01906b1d-... | 01905a3b-... | テスト投稿（消し忘れ） | 2025-10-02 19:30:00+09 | **2025-10-03 08:00:00+09** |
 
 ```sql
 -- 全てのクエリに WHERE deleted_at IS NULL を追加しなければならない
@@ -584,27 +812,30 @@ INSERT INTO posts_archive SELECT * FROM deleted;
 
 ユーザー、投稿、リプライ、いいね数、フォロー数を1テーブルにまとめる。
 
-```sql
-CREATE TABLE everything (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_name       VARCHAR(100),
-    user_bio        TEXT,
-    post_content    TEXT,
-    reply_content   TEXT,
-    reply_to_post   UUID,
-    like_count      INTEGER DEFAULT 0,
-    follower_count  INTEGER DEFAULT 0,
-    following_count INTEGER DEFAULT 0,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-```
+**テーブル定義（everything — 全部入りテーブル）:**
 
-```sql
--- 投稿のデータなのにユーザー系カラムは NULL
-INSERT INTO everything (id, post_content, created_at)
-VALUES (gen_random_uuid(), '今日は天気が良いですね！', NOW());
--- → user_name, user_bio, reply_content, reply_to_post, like_count, follower_count, following_count が全て NULL
-```
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| id | UUID (UUIDv7) | 行ID（主キー） |
+| user_name | VARCHAR(100) | ユーザー名（ユーザー行のみ） |
+| user_bio | TEXT | プロフィール（ユーザー行のみ） |
+| post_content | TEXT | 投稿本文（投稿行のみ） |
+| reply_content | TEXT | リプライ本文（リプライ行のみ） |
+| reply_to_post | UUID | リプライ先投稿ID（リプライ行のみ） |
+| like_count | INTEGER | いいね数 |
+| follower_count | INTEGER | フォロワー数 |
+| following_count | INTEGER | フォロー数 |
+| created_at | TIMESTAMPTZ | 作成日時 |
+
+サンプルデータ:
+
+| id | user_name | user_bio | post_content | reply_content | reply_to_post | like_count | follower_count | following_count | created_at |
+|----|-----------|----------|-------------|--------------|---------------|-----------|---------------|----------------|------------|
+| 01905a3b-... | 田中 花子 | 日常のこと... | NULL | NULL | NULL | NULL | 120 | 45 | 2025-06-15 ... |
+| 01906b1a-... | NULL | NULL | 今日は天気が良い | NULL | NULL | 15 | NULL | NULL | 2025-10-01 ... |
+| 01907d1a-... | NULL | NULL | NULL | いい写真ですね！ | 01906b1a-... | NULL | NULL | NULL | 2025-10-01 ... |
+
+> ⚠️ 1行あたり10カラム中、常に5〜7カラムが NULL。行の意味がカラムの値の有無で決まるため、構造から意味を読み取ることが不可能。
 
 ### ✅ 正しい設計
 
@@ -619,6 +850,8 @@ VALUES (gen_random_uuid(), '今日は天気が良いですね！', NOW());
 -- follows:        フォロー関係
 -- （他7テーブル）
 ```
+
+詳細は [00_schema.md](00_schema.md) を参照。
 
 ### なぜダメなのか
 
@@ -684,7 +917,7 @@ LIMIT 20;
 - **スキーマ変更で壊れる**: カラムの追加・削除・型変更があると、`SELECT *` に依存するクエリやアプリケーションコードが予期せず壊れる
 - 結合で同名カラム（例: `id`, `created_at`）が衝突し、アプリケーション側で区別できなくなる
 
-> 💡 02_indexing.md で学んだ INCLUDE カバリングインデックスの効果を最大限に引き出すためにも、カラムは明示的に指定しましょう。
+> 💡 [02_indexing.md](02_indexing.md) で学んだ INCLUDE カバリングインデックスの効果を最大限に引き出すためにも、カラムは明示的に指定しましょう。
 
 ---
 
