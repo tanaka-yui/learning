@@ -6,7 +6,7 @@
 #
 # 各章のデータベース
 #   chapter01 ... 01/ (正規化)
-#   chapter02 ... 02/ が追加されたら init/00_init.sh のコメントを外す
+#   chapter02 ... 02/ (クエリ最適化) ※ SQL ファイル完成後に init/00_init.sh のコメントを外す
 #
 # 起動:  docker compose up -d
 # 停止:  docker compose down
