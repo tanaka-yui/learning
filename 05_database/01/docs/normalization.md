@@ -191,7 +191,7 @@ erDiagram
 
 ```mermaid
 erDiagram
-    products ||--o{ order_items : "included_in"
+    products ||--o{ order_items : "1 対 多"
 
     products {
         INT product_id PK "商品ID"
@@ -294,7 +294,7 @@ erDiagram
 
 ```mermaid
 erDiagram
-    staff ||--o{ orders : "handles"
+    staff ||--o{ orders : "1 対 多"
 
     staff {
         INT staff_id PK "スタッフID"
@@ -393,7 +393,7 @@ erDiagram
 
 ```mermaid
 erDiagram
-    teacher_subjects ||--o{ enrollments : "teaches"
+    teacher_subjects ||--o{ enrollments : "1 対 多"
 
     teacher_subjects {
         INT teacher_id PK "教師ID"
@@ -484,12 +484,18 @@ erDiagram
 
 ```mermaid
 erDiagram
-    person_hobbies {
+    persons ||--o{ person_hobbies : "1 対 多"
+    persons ||--o{ person_skills : "1 対 多"
+
+    persons {
         INT person_id PK "人物ID"
+    }
+    person_hobbies {
+        INT person_id FK "人物ID"
         VARCHAR hobby PK "趣味"
     }
     person_skills {
-        INT person_id PK "人物ID"
+        INT person_id FK "人物ID"
         VARCHAR skill PK "スキル"
     }
 ```
