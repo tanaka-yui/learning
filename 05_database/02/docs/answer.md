@@ -7,14 +7,14 @@
 
 ## Step 1: ベースクエリ
 
-**クエリの目的:** ユーザーID=1 がフォローしているユーザーの投稿を新着順に20件取得する
+**クエリの目的:** 演習ユーザー（`:'my_id'`）がフォローしているユーザーの投稿を新着順に20件取得する
 
 ```sql
 SELECT p.id, p.content, p.created_at, u.display_name
 FROM posts p
 JOIN users u ON u.id = p.user_id
 JOIN follows f ON f.follow_user_id = p.user_id
-WHERE f.user_id = 1
+WHERE f.user_id = :'my_id'
 ORDER BY p.created_at DESC
 LIMIT 20;
 ```
@@ -24,37 +24,37 @@ LIMIT 20;
 | 部分 | 役割 |
 |------|------|
 | `JOIN follows f ON f.follow_user_id = p.user_id` | 投稿者がフォロー対象かどうかを結合で確認 |
-| `WHERE f.user_id = 1` | ユーザーID=1 のフォロー関係だけに絞り込む |
+| `WHERE f.user_id = :'my_id'` | 演習ユーザーのフォロー関係だけに絞り込む |
 | `ORDER BY p.created_at DESC` | 新着順に並び替える |
 | `LIMIT 20` | 先頭20件のみ取得する |
 
-**問題点:** `follows` テーブルを全件スキャンしてから `user_id = 1` で絞り込んでいるため、フォロー数が増えるほど遅くなる。
+**問題点:** `follows` テーブルを全件スキャンしてから `user_id = :'my_id'` で絞り込んでいるため、フォロー数が増えるほど遅くなる。
 
 ---
 
 ## Step 2: EXPLAIN ANALYZE で実行計画を読む
 
 ```
-Hash Join  (cost=1335.00..6231.00 rows=2000 width=114) (actual time=12.3..45.2 loops=1)
+Hash Join  (cost=3335.00..36231.00 rows=2000 width=114) (actual time=32.3..245.2 loops=1)
   Hash Cond: (p.user_id = f.follow_user_id)
-  -> Seq Scan on posts  (cost=0.00..2831.00 rows=100000 width=80)
-       (actual time=0.024..18.3 rows=100000 loops=1)
-  -> Hash  (cost=1285.00..1285.00 rows=4000 width=4) (actual time=11.8..11.8 loops=1)
-       -> Seq Scan on follows  (cost=0.00..1085.00 rows=50000 width=8)
-            (actual time=0.018..7.2 rows=50000 loops=1)
-            Filter: (user_id = 1)
-            Rows Removed by Filter: 49950
-Execution Time: 45.8 ms
+  -> Seq Scan on posts  (cost=0.00..28431.00 rows=1000000 width=80)
+       (actual time=0.024..183.0 rows=1000000 loops=1)
+  -> Hash  (cost=3285.00..3285.00 rows=4000 width=16) (actual time=31.8..31.8 loops=1)
+       -> Seq Scan on follows  (cost=0.00..3085.00 rows=300000 width=32)
+            (actual time=0.018..17.2 rows=300000 loops=1)
+            Filter: (user_id = '01905a3b-7c10-7000-8000-000000000001')
+            Rows Removed by Filter: 299970
+Execution Time: 245.8 ms
 ```
 
 **問題点の読み取り方:**
 
 | 注目箇所 | 意味 |
 |---------|------|
-| `Seq Scan on posts (rows=100000)` | posts テーブルを全10万件スキャンしている |
-| `Seq Scan on follows (rows=50000)` | follows テーブルを全5万件スキャンしている |
-| `Rows Removed by Filter: 49950` | 5万件スキャンして実際に使うのは約50件のみ（99.9%が無駄） |
-| `Execution Time: 45.8 ms` | インデックスなしでは約46msかかっている |
+| `Seq Scan on posts (rows=1000000)` | posts テーブルを全100万件スキャンしている |
+| `Seq Scan on follows (rows=300000)` | follows テーブルを全30万件スキャンしている |
+| `Rows Removed by Filter: 299970` | 30万件スキャンして実際に使うのは約30件のみ（99.99%が無駄） |
+| `Execution Time: 245.8 ms` | インデックスなしでは約246msかかっている |
 
 ---
 
@@ -82,7 +82,7 @@ FROM posts p
 JOIN users u ON u.id = p.user_id
 WHERE EXISTS (
     SELECT 1 FROM follows f
-    WHERE f.user_id = 1 AND f.follow_user_id = p.user_id
+    WHERE f.user_id = :'my_id' AND f.follow_user_id = p.user_id
 )
 ORDER BY p.created_at DESC
 LIMIT 20;
@@ -92,9 +92,9 @@ LIMIT 20;
 
 ```
 Nested Loop  (cost=0.56..845.20 rows=100 width=114) (actual time=0.04..1.8 loops=1)
-  -> Index Scan using idx_follows_user_id on follows  (cost=0.29..54.30 rows=50 ...)
-       Index Cond: (user_id = 1)
-  -> Index Scan using idx_posts_user_created on posts  (cost=0.29..15.30 rows=2 ...)
+  -> Index Scan using idx_follows_user_id on follows  (cost=0.42..54.30 rows=30 ...)
+       Index Cond: (user_id = '01905a3b-7c10-7000-8000-000000000001')
+  -> Index Scan using idx_posts_user_created on posts  (cost=0.56..15.30 rows=2 ...)
        Index Cond: (user_id = f.follow_user_id)
 Execution Time: 1.9 ms
 ```
@@ -103,9 +103,9 @@ Execution Time: 1.9 ms
 
 | 指標 | 最適化前 | 最適化後 |
 |------|---------|---------|
-| follows スキャン | Seq Scan（全50,000件） | Index Scan（~50件） |
-| posts スキャン | Seq Scan（全100,000件） | Index Scan（絞り込み済み） |
-| 実行時間 | ~45ms | ~2ms |
+| follows スキャン | Seq Scan（全300,000件） | Index Scan（~30件） |
+| posts スキャン | Seq Scan（全1,000,000件） | Index Scan（絞り込み済み） |
+| 実行時間 | ~246ms | ~2ms |
 
 ---
 
@@ -121,7 +121,7 @@ WITH
         FROM posts p
         WHERE EXISTS (
             SELECT 1 FROM follows f
-            WHERE f.user_id = 1 AND f.follow_user_id = p.user_id
+            WHERE f.user_id = :'my_id' AND f.follow_user_id = p.user_id
         )
     ),
     -- フォロー中タグの投稿
@@ -132,7 +132,7 @@ WITH
             SELECT 1
             FROM hashtag_posts hp
             JOIN hashtag_follows hf ON hf.hashtag_id = hp.hashtag_id
-            WHERE hp.post_id = p.id AND hf.user_id = 1
+            WHERE hp.post_id = p.id AND hf.user_id = :'my_id'
         )
     ),
     -- 全フィード（重複除去）
@@ -146,16 +146,16 @@ FROM feed f
 JOIN users u ON u.id = f.user_id
 -- ブロック/ミュート除外（4方向）
 WHERE NOT EXISTS (
-    SELECT 1 FROM user_blocks b WHERE b.user_id = 1 AND b.block_user_id = f.user_id
+    SELECT 1 FROM user_blocks b WHERE b.user_id = :'my_id' AND b.block_user_id = f.user_id
 )
 AND NOT EXISTS (
-    SELECT 1 FROM user_blocks b WHERE b.user_id = f.user_id AND b.block_user_id = 1
+    SELECT 1 FROM user_blocks b WHERE b.user_id = f.user_id AND b.block_user_id = :'my_id'
 )
 AND NOT EXISTS (
-    SELECT 1 FROM user_mutes m WHERE m.user_id = 1 AND m.mute_user_id = f.user_id
+    SELECT 1 FROM user_mutes m WHERE m.user_id = :'my_id' AND m.mute_user_id = f.user_id
 )
 AND NOT EXISTS (
-    SELECT 1 FROM user_mutes m WHERE m.user_id = f.user_id AND m.mute_user_id = 1
+    SELECT 1 FROM user_mutes m WHERE m.user_id = f.user_id AND m.mute_user_id = :'my_id'
 )
 ORDER BY f.created_at DESC
 LIMIT 20;
@@ -209,12 +209,12 @@ CREATE INDEX IF NOT EXISTS idx_user_mutes_muted
 
 | インデックス | 対応する NOT EXISTS / EXISTS の条件 |
 |------------|----------------------------------|
-| `idx_hashtag_follows_user` | `hf.user_id = 1` でタグフォロー一覧を高速取得 |
+| `idx_hashtag_follows_user` | `hf.user_id = :'my_id'` でタグフォロー一覧を高速取得 |
 | `idx_hashtag_posts_hashtag` | `hp.hashtag_id = hf.hashtag_id` でタグ付き投稿を高速取得 |
-| `idx_user_blocks_user` | `b.user_id = 1` の方向（自分がブロック）を高速検索 |
-| `idx_user_blocks_blocked` | `b.block_user_id = 1` の方向（自分がブロックされ）を高速検索 |
-| `idx_user_mutes_user` | `m.user_id = 1` の方向（自分がミュート）を高速検索 |
-| `idx_user_mutes_muted` | `m.mute_user_id = 1` の方向（自分がミュートされ）を高速検索 |
+| `idx_user_blocks_user` | `b.user_id = :'my_id'` の方向（自分がブロック）を高速検索 |
+| `idx_user_blocks_blocked` | `b.block_user_id = :'my_id'` の方向（自分がブロックされ）を高速検索 |
+| `idx_user_mutes_user` | `m.user_id = :'my_id'` の方向（自分がミュート）を高速検索 |
+| `idx_user_mutes_muted` | `m.mute_user_id = :'my_id'` の方向（自分がミュートされ）を高速検索 |
 
 インデックス追加後は `Seq Scan` が `Index Scan` に切り替わり、各 `NOT EXISTS` のサブクエリが定数時間で完了するようになる。
 
@@ -231,7 +231,7 @@ WITH
         FROM posts p
         WHERE EXISTS (
             SELECT 1 FROM follows f
-            WHERE f.user_id = 1 AND f.follow_user_id = p.user_id
+            WHERE f.user_id = :'my_id' AND f.follow_user_id = p.user_id
         )
     ),
     tag_feed AS (
@@ -241,7 +241,7 @@ WITH
             SELECT 1
             FROM hashtag_posts hp
             JOIN hashtag_follows hf ON hf.hashtag_id = hp.hashtag_id
-            WHERE hp.post_id = p.id AND hf.user_id = 1
+            WHERE hp.post_id = p.id AND hf.user_id = :'my_id'
         )
     ),
     feed AS (
@@ -262,16 +262,16 @@ FROM feed f
 JOIN users u ON u.id = f.user_id
 JOIN post_stats ps ON ps.post_id = f.id
 WHERE NOT EXISTS (
-    SELECT 1 FROM user_blocks b WHERE b.user_id = 1 AND b.block_user_id = f.user_id
+    SELECT 1 FROM user_blocks b WHERE b.user_id = :'my_id' AND b.block_user_id = f.user_id
 )
 AND NOT EXISTS (
-    SELECT 1 FROM user_blocks b WHERE b.user_id = f.user_id AND b.block_user_id = 1
+    SELECT 1 FROM user_blocks b WHERE b.user_id = f.user_id AND b.block_user_id = :'my_id'
 )
 AND NOT EXISTS (
-    SELECT 1 FROM user_mutes m WHERE m.user_id = 1 AND m.mute_user_id = f.user_id
+    SELECT 1 FROM user_mutes m WHERE m.user_id = :'my_id' AND m.mute_user_id = f.user_id
 )
 AND NOT EXISTS (
-    SELECT 1 FROM user_mutes m WHERE m.user_id = f.user_id AND m.mute_user_id = 1
+    SELECT 1 FROM user_mutes m WHERE m.user_id = f.user_id AND m.mute_user_id = :'my_id'
 )
 ORDER BY f.created_at DESC
 LIMIT 20;
@@ -294,13 +294,13 @@ LIMIT 20;
 
 | 指標 | Step 1（最適化なし） | Step 6（最適化後） |
 |-----|-------------------|--------------------|
-| follows スキャン | Seq Scan（全50,000件） | Index Scan（~50件） |
-| posts スキャン | Seq Scan（全100,000件） | Index Scan（絞り込み済み） |
+| follows スキャン | Seq Scan（全300,000件） | Index Scan（~30件） |
+| posts スキャン | Seq Scan（全1,000,000件） | Index Scan（絞り込み済み） |
 | ブロック/ミュート除外 | なし | NOT EXISTS 4方向 |
 | タグフォロー | なし | hashtag_posts + hashtag_follows |
 | いいね数取得 | なし | post_stats.like_count（JOIN） |
 | タグ表示 | なし | posts.hashtags（JSON直接参照） |
-| 実行時間（目安） | ~45ms | ~2ms以下 |
+| 実行時間（目安） | ~246ms | ~2ms以下 |
 
 ### インデックス一覧
 

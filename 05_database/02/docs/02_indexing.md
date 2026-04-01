@@ -135,39 +135,39 @@ CREATE INDEX idx_posts_active ON posts(active);  -- 効果薄
 
 ## 6. 実践例 — follows テーブルの複合インデックス
 
-「ユーザー ID=1 がフォローしているユーザーの最新投稿を取得する」というタイムライン系クエリを例に、インデックスの効果を確認します。
+「演習ユーザー（`:'my_id'`）がフォローしているユーザーの最新投稿を取得する」というタイムライン系クエリを例に、インデックスの効果を確認します。
 
 ### Before: follows.user_id にインデックスがない状態
 
 ```
-Hash Join  (cost=1135.00..4731.00 rows=2000 width=...)
+Hash Join  (cost=3135.00..34731.00 rows=2000 width=...)
   Hash Cond: (p.user_id = f.follow_user_id)
-  -> Seq Scan on posts  (cost=0.00..2331.00 rows=100000 ...)
-  -> Hash  (cost=1085.00..1085.00 rows=4000 ...)
-       -> Seq Scan on follows  (cost=0.00..1085.00 rows=4000 ...)
-            Filter: (user_id = 1)
-Execution Time: 45.2 ms
+  -> Seq Scan on posts  (cost=0.00..23310.00 rows=1000000 ...)
+  -> Hash  (cost=3085.00..3085.00 rows=4000 ...)
+       -> Seq Scan on follows  (cost=0.00..3085.00 rows=4000 ...)
+            Filter: (user_id = :'my_id')
+Execution Time: 145.2 ms
 ```
 
 **問題点:**
-- `follows` テーブルの全 50,000 件を Seq Scan してから `user_id = 1` の行を絞り込んでいる
-- `posts` テーブルの全 100,000 件も Seq Scan して Hash Join している
+- `follows` テーブルの全 300,000 件を Seq Scan してから `user_id = :'my_id'` の行を絞り込んでいる
+- `posts` テーブルの全 1,000,000 件も Seq Scan して Hash Join している
 - 結合前に双方の大きなテーブルをフルスキャンしているため時間がかかる
 
 ### After: 複合インデックス `idx_follows_user` を追加した状態
 
 ```
 Nested Loop  (cost=0.56..845.20 rows=2000 width=...)
-  -> Index Scan using idx_follows_user on follows  (cost=0.29..54.30 rows=50 ...)
-       Index Cond: (user_id = 1)
-  -> Index Scan using posts_pkey on posts  (cost=0.29..15.30 rows=1 ...)
+  -> Index Scan using idx_follows_user on follows  (cost=0.42..54.30 rows=30 ...)
+       Index Cond: (user_id = :'my_id')
+  -> Index Scan using posts_pkey on posts  (cost=0.56..15.30 rows=1 ...)
        Index Cond: (user_id = f.follow_user_id)
 Execution Time: 1.8 ms
 ```
 
 **改善ポイント:**
-- `follows` テーブルへのアクセスが Seq Scan から **Index Scan** に変わり、`user_id = 1` の行（約 50 件）だけを取得できるようになった
-- 取得した 50 件の `follow_user_id` に対して `posts_pkey` を使って Nested Loop で結合するため、`posts` のフルスキャンも不要になった
-- 実行時間が **45.2 ms → 1.8 ms**（約 25 倍高速化）
+- `follows` テーブルへのアクセスが Seq Scan から **Index Scan** に変わり、該当ユーザーのフォロー先（約 30 件）だけを取得できるようになった
+- 取得した 30 件の `follow_user_id` に対して `posts_pkey` を使って Nested Loop で結合するため、`posts` のフルスキャンも不要になった
+- 実行時間が **145.2 ms → 1.8 ms**（約 80 倍高速化）
 
 このように、結合の起点となるカラム（外部キーや絞り込み条件に使うカラム）にインデックスを張ることで、クエリの実行計画が劇的に改善されます。

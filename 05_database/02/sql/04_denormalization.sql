@@ -4,6 +4,12 @@
 -- 注意: 00_schema.sql 実行後に使うこと
 -- ============================================================
 
+-- ----------------------------------------------------------------
+-- 使用するユーザーID（UUID）を変数に設定
+-- ----------------------------------------------------------------
+SELECT id AS my_id FROM users ORDER BY id LIMIT 1 \gset
+SELECT id AS demo_user FROM users ORDER BY id LIMIT 1 OFFSET 41 \gset
+
 -- ================================================================
 -- パターン1: 冗長FK（post_favorites に post_user_id を持たせる）
 -- ================================================================
@@ -13,10 +19,10 @@ EXPLAIN ANALYZE
 SELECT pf.user_id AS reaction_user, p.user_id AS post_owner
 FROM post_favorites pf
 JOIN posts p ON p.id = pf.post_id
-WHERE p.user_id = 42;
+WHERE p.user_id = :'demo_user';
 
 -- 非正規化: post_favorites に post_user_id カラムを追加
-ALTER TABLE post_favorites ADD COLUMN IF NOT EXISTS post_user_id INT;
+ALTER TABLE post_favorites ADD COLUMN IF NOT EXISTS post_user_id UUID;
 
 -- 既存データに値を設定
 UPDATE post_favorites pf
@@ -35,7 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_post_favorites_post_user
 EXPLAIN ANALYZE
 SELECT user_id AS reaction_user, post_user_id AS post_owner
 FROM post_favorites
-WHERE post_user_id = 42;
+WHERE post_user_id = :'demo_user';
 
 -- ================================================================
 -- パターン2: JSON集約カラム（posts に hashtags を持たせる）
@@ -47,7 +53,7 @@ SELECT p.id, p.content, array_agg(h.name) AS tags
 FROM posts p
 LEFT JOIN hashtag_posts hp ON hp.post_id = p.id
 LEFT JOIN hashtags h ON h.id = hp.hashtag_id
-WHERE p.user_id = 42
+WHERE p.user_id = :'demo_user'
 GROUP BY p.id, p.content;
 
 -- 非正規化: posts に JSON配列カラムを追加
@@ -68,7 +74,7 @@ CREATE INDEX IF NOT EXISTS idx_posts_hashtags
 
 -- After: JOINなしでタグを取得できる
 EXPLAIN ANALYZE
-SELECT id, content, hashtags FROM posts WHERE user_id = 42;
+SELECT id, content, hashtags FROM posts WHERE user_id = :'demo_user';
 
 -- ================================================================
 -- パターン3: 集約キャッシュテーブル（post_stats）
@@ -81,13 +87,13 @@ SELECT
     (SELECT COUNT(*) FROM post_favorites pf WHERE pf.post_id = p.id) AS like_count,
     (SELECT COUNT(*) FROM post_replies  pr WHERE pr.post_id = p.id) AS reply_count
 FROM posts p
-WHERE p.user_id IN (SELECT follow_user_id FROM follows WHERE user_id = 1)
+WHERE p.user_id IN (SELECT follow_user_id FROM follows WHERE user_id = :'my_id')
 ORDER BY p.created_at DESC
 LIMIT 20;
 
 -- 集約キャッシュテーブルを作成
 CREATE TABLE IF NOT EXISTS post_stats (
-    post_id     INT PRIMARY KEY REFERENCES posts(id),
+    post_id     UUID PRIMARY KEY REFERENCES posts(id),
     like_count  INT NOT NULL DEFAULT 0,
     reply_count INT NOT NULL DEFAULT 0,
     stamp_count INT NOT NULL DEFAULT 0,
@@ -117,6 +123,6 @@ EXPLAIN ANALYZE
 SELECT p.id, p.content, p.created_at, ps.like_count, ps.reply_count
 FROM posts p
 JOIN post_stats ps ON ps.post_id = p.id
-WHERE p.user_id IN (SELECT follow_user_id FROM follows WHERE user_id = 1)
+WHERE p.user_id IN (SELECT follow_user_id FROM follows WHERE user_id = :'my_id')
 ORDER BY p.created_at DESC
 LIMIT 20;

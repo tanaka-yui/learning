@@ -33,5 +33,15 @@ services:
       timeout: 5s
       retries: 5
 
+  seed:
+    build: ./02/tools/seed
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://learning:learning@postgres:5432/chapter02
+    profiles:
+      - tools
+
 volumes:
   postgres_data:

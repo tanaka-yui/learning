@@ -5,6 +5,11 @@
 -- ============================================================
 
 -- ================================================================
+-- 演習ユーザーの設定（\gset でUUIDを変数に格納）
+-- ================================================================
+SELECT id AS my_id FROM users ORDER BY id LIMIT 1 \gset
+
+-- ================================================================
 -- Step 3: インデックスを追加して改善する
 -- ================================================================
 
@@ -23,7 +28,7 @@ FROM posts p
 JOIN users u ON u.id = p.user_id
 WHERE EXISTS (
     SELECT 1 FROM follows f
-    WHERE f.user_id = 1 AND f.follow_user_id = p.user_id
+    WHERE f.user_id = :'my_id' AND f.follow_user_id = p.user_id
 )
 ORDER BY p.created_at DESC
 LIMIT 20;
@@ -38,7 +43,7 @@ WITH
         FROM posts p
         WHERE EXISTS (
             SELECT 1 FROM follows f
-            WHERE f.user_id = 1 AND f.follow_user_id = p.user_id
+            WHERE f.user_id = :'my_id' AND f.follow_user_id = p.user_id
         )
     ),
     -- フォロー中タグの投稿
@@ -49,7 +54,7 @@ WITH
             SELECT 1
             FROM hashtag_posts hp
             JOIN hashtag_follows hf ON hf.hashtag_id = hp.hashtag_id
-            WHERE hp.post_id = p.id AND hf.user_id = 1
+            WHERE hp.post_id = p.id AND hf.user_id = :'my_id'
         )
     ),
     -- 全フィード（重複除去）
@@ -63,16 +68,16 @@ FROM feed f
 JOIN users u ON u.id = f.user_id
 -- ブロック/ミュート除外（4方向）
 WHERE NOT EXISTS (
-    SELECT 1 FROM user_blocks b WHERE b.user_id = 1 AND b.block_user_id = f.user_id
+    SELECT 1 FROM user_blocks b WHERE b.user_id = :'my_id' AND b.block_user_id = f.user_id
 )
 AND NOT EXISTS (
-    SELECT 1 FROM user_blocks b WHERE b.user_id = f.user_id AND b.block_user_id = 1
+    SELECT 1 FROM user_blocks b WHERE b.user_id = f.user_id AND b.block_user_id = :'my_id'
 )
 AND NOT EXISTS (
-    SELECT 1 FROM user_mutes m WHERE m.user_id = 1 AND m.mute_user_id = f.user_id
+    SELECT 1 FROM user_mutes m WHERE m.user_id = :'my_id' AND m.mute_user_id = f.user_id
 )
 AND NOT EXISTS (
-    SELECT 1 FROM user_mutes m WHERE m.user_id = f.user_id AND m.mute_user_id = 1
+    SELECT 1 FROM user_mutes m WHERE m.user_id = f.user_id AND m.mute_user_id = :'my_id'
 )
 ORDER BY f.created_at DESC
 LIMIT 20;
@@ -109,7 +114,7 @@ WITH
         FROM posts p
         WHERE EXISTS (
             SELECT 1 FROM follows f
-            WHERE f.user_id = 1 AND f.follow_user_id = p.user_id
+            WHERE f.user_id = :'my_id' AND f.follow_user_id = p.user_id
         )
     ),
     tag_feed AS (
@@ -119,7 +124,7 @@ WITH
             SELECT 1
             FROM hashtag_posts hp
             JOIN hashtag_follows hf ON hf.hashtag_id = hp.hashtag_id
-            WHERE hp.post_id = p.id AND hf.user_id = 1
+            WHERE hp.post_id = p.id AND hf.user_id = :'my_id'
         )
     ),
     feed AS (
@@ -131,16 +136,16 @@ SELECT f.id, f.content, f.created_at, u.display_name
 FROM feed f
 JOIN users u ON u.id = f.user_id
 WHERE NOT EXISTS (
-    SELECT 1 FROM user_blocks b WHERE b.user_id = 1 AND b.block_user_id = f.user_id
+    SELECT 1 FROM user_blocks b WHERE b.user_id = :'my_id' AND b.block_user_id = f.user_id
 )
 AND NOT EXISTS (
-    SELECT 1 FROM user_blocks b WHERE b.user_id = f.user_id AND b.block_user_id = 1
+    SELECT 1 FROM user_blocks b WHERE b.user_id = f.user_id AND b.block_user_id = :'my_id'
 )
 AND NOT EXISTS (
-    SELECT 1 FROM user_mutes m WHERE m.user_id = 1 AND m.mute_user_id = f.user_id
+    SELECT 1 FROM user_mutes m WHERE m.user_id = :'my_id' AND m.mute_user_id = f.user_id
 )
 AND NOT EXISTS (
-    SELECT 1 FROM user_mutes m WHERE m.user_id = f.user_id AND m.mute_user_id = 1
+    SELECT 1 FROM user_mutes m WHERE m.user_id = f.user_id AND m.mute_user_id = :'my_id'
 )
 ORDER BY f.created_at DESC
 LIMIT 20;
@@ -157,7 +162,7 @@ WITH
         FROM posts p
         WHERE EXISTS (
             SELECT 1 FROM follows f
-            WHERE f.user_id = 1 AND f.follow_user_id = p.user_id
+            WHERE f.user_id = :'my_id' AND f.follow_user_id = p.user_id
         )
     ),
     tag_feed AS (
@@ -167,7 +172,7 @@ WITH
             SELECT 1
             FROM hashtag_posts hp
             JOIN hashtag_follows hf ON hf.hashtag_id = hp.hashtag_id
-            WHERE hp.post_id = p.id AND hf.user_id = 1
+            WHERE hp.post_id = p.id AND hf.user_id = :'my_id'
         )
     ),
     feed AS (
@@ -188,16 +193,16 @@ FROM feed f
 JOIN users u ON u.id = f.user_id
 JOIN post_stats ps ON ps.post_id = f.id
 WHERE NOT EXISTS (
-    SELECT 1 FROM user_blocks b WHERE b.user_id = 1 AND b.block_user_id = f.user_id
+    SELECT 1 FROM user_blocks b WHERE b.user_id = :'my_id' AND b.block_user_id = f.user_id
 )
 AND NOT EXISTS (
-    SELECT 1 FROM user_blocks b WHERE b.user_id = f.user_id AND b.block_user_id = 1
+    SELECT 1 FROM user_blocks b WHERE b.user_id = f.user_id AND b.block_user_id = :'my_id'
 )
 AND NOT EXISTS (
-    SELECT 1 FROM user_mutes m WHERE m.user_id = 1 AND m.mute_user_id = f.user_id
+    SELECT 1 FROM user_mutes m WHERE m.user_id = :'my_id' AND m.mute_user_id = f.user_id
 )
 AND NOT EXISTS (
-    SELECT 1 FROM user_mutes m WHERE m.user_id = f.user_id AND m.mute_user_id = 1
+    SELECT 1 FROM user_mutes m WHERE m.user_id = f.user_id AND m.mute_user_id = :'my_id'
 )
 ORDER BY f.created_at DESC
 LIMIT 20;
