@@ -41,5 +41,5 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "chapter02" \
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "chapter02" \
     -f /sql/02/exercise.sql
 
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "chapter02" \
-    -f /sql/02/answer.sql
+# answer.sql は演習後に手動実行してください（自動実行すると演習の Seq Scan 観察機会が失われます）
+# psql -h localhost -U learning -d chapter02 -f /sql/02/answer.sql
