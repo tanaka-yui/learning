@@ -51,17 +51,13 @@
 
 ### 違反例
 
-```sql
--- 第1正規形違反: 1つのセルに複数の値が入っている
-CREATE TABLE orders_bad (
-    order_id    INT PRIMARY KEY,
-    customer    VARCHAR(100),
-    items       VARCHAR(500)  -- 例: '牛乳,卵,パン' （複数値）
-);
+**orders_bad（注文テーブル・違反）**
 
-INSERT INTO orders_bad VALUES (1, '田中 花子', '牛乳,卵,パン');
-INSERT INTO orders_bad VALUES (2, '鈴木 一郎', '卵,バター');
-```
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| order_id | 注文ID | INT | PK |
+| customer | 顧客名 | VARCHAR(100) | |
+| items | 商品リスト | VARCHAR(500) | 例: `'牛乳,卵,パン'`（複数値） |
 
 **問題点:**
 - `items` に複数の商品が詰め込まれている
@@ -70,38 +66,20 @@ INSERT INTO orders_bad VALUES (2, '鈴木 一郎', '卵,バター');
 
 ### 第1正規形に変換後
 
-```sql
--- 第1正規形準拠: 繰り返しグループを行に展開する
-CREATE TABLE orders (
-    order_id    INT,
-    customer    VARCHAR(100),
-    item        VARCHAR(100),
-    PRIMARY KEY (order_id, item)
-);
+**orders（注文テーブル）**
 
-INSERT INTO orders VALUES (1, '田中 花子', '牛乳');
-INSERT INTO orders VALUES (1, '田中 花子', '卵');
-INSERT INTO orders VALUES (1, '田中 花子', 'パン');
-INSERT INTO orders VALUES (2, '鈴木 一郎', '卵');
-INSERT INTO orders VALUES (2, '鈴木 一郎', 'バター');
-```
-
-#### テーブル定義
-
-**orders**
-
-| 列名 | 型 | 制約 |
-|------|-----|------|
-| order_id | INT | PK（複合） |
-| customer | VARCHAR(100) | |
-| item | VARCHAR(100) | PK（複合） |
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| order_id | 注文ID | INT | PK（複合） |
+| customer | 顧客名 | VARCHAR(100) | |
+| item | 商品名 | VARCHAR(100) | PK（複合） |
 
 ```mermaid
 erDiagram
     orders {
-        INT order_id PK
-        VARCHAR customer
-        VARCHAR item PK
+        INT order_id PK "注文ID"
+        VARCHAR customer "顧客名"
+        VARCHAR item PK "商品名"
     }
 ```
 
@@ -118,6 +96,8 @@ erDiagram
 | 得られる効果 | 個別データの検索・追加・削除が容易になる |
 | まだ残る課題 | 部分関数従属（主キーの一部で非キー列が決まる） |
 
+---
+
 ## 4. 第2正規形
 
 ### 定義
@@ -129,17 +109,14 @@ erDiagram
 
 ### 違反例
 
-```sql
--- 第2正規形違反: 複合主キー (order_id, product_id) のうち
--- product_id だけで product_name が決まる（部分関数従属）
-CREATE TABLE order_items_bad (
-    order_id     INT,
-    product_id   INT,
-    product_name VARCHAR(100),  -- product_id だけで決まる → 部分従属
-    quantity     INT,
-    PRIMARY KEY (order_id, product_id)
-);
-```
+**order_items_bad（注文明細テーブル・違反）**
+
+| 列名 | 日本語名 | 型 | 制約 | 備考 |
+|------|---------|-----|------|------|
+| order_id | 注文ID | INT | PK（複合） | |
+| product_id | 商品ID | INT | PK（複合） | |
+| product_name | 商品名 | VARCHAR(100) | | `product_id` だけで決まる → 部分従属 |
+| quantity | 数量 | INT | | |
 
 **問題点:**
 - 商品名を変更するとき、その商品を含む全行を更新する必要がある（更新異常）
@@ -147,50 +124,33 @@ CREATE TABLE order_items_bad (
 
 ### 第2正規形に変換後
 
-```sql
--- 商品テーブルを分離する
-CREATE TABLE products (
-    product_id   INT PRIMARY KEY,
-    product_name VARCHAR(100)
-);
+**products（商品テーブル）**
 
-CREATE TABLE order_items (
-    order_id    INT,
-    product_id  INT REFERENCES products(product_id),
-    quantity    INT,
-    PRIMARY KEY (order_id, product_id)
-);
-```
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| product_id | 商品ID | INT | PK |
+| product_name | 商品名 | VARCHAR(100) | |
 
-#### テーブル定義
+**order_items（注文明細テーブル）**
 
-**products**
-
-| 列名 | 型 | 制約 |
-|------|-----|------|
-| product_id | INT | PK |
-| product_name | VARCHAR(100) | |
-
-**order_items**
-
-| 列名 | 型 | 制約 |
-|------|-----|------|
-| order_id | INT | PK（複合） |
-| product_id | INT | PK（複合）, FK → products |
-| quantity | INT | |
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| order_id | 注文ID | INT | PK（複合） |
+| product_id | 商品ID | INT | PK（複合）, FK → products |
+| quantity | 数量 | INT | |
 
 ```mermaid
 erDiagram
     products ||--o{ order_items : "included_in"
 
     products {
-        INT product_id PK
-        VARCHAR product_name
+        INT product_id PK "商品ID"
+        VARCHAR product_name "商品名"
     }
     order_items {
-        INT order_id PK
-        INT product_id PK
-        INT quantity
+        INT order_id PK "注文ID"
+        INT product_id PK "商品ID"
+        INT quantity "数量"
     }
 ```
 
@@ -220,16 +180,15 @@ erDiagram
 
 ### 違反例
 
-```sql
--- 第3正規形違反: order_id → staff_id → staff_name という推移従属
-CREATE TABLE orders_bad (
-    order_id    INT PRIMARY KEY,
-    customer_id INT,
-    staff_id    INT,
-    staff_name  VARCHAR(100),  -- staff_id で決まる → 推移従属
-    order_date  DATE
-);
-```
+**orders_bad（注文テーブル・違反）**
+
+| 列名 | 日本語名 | 型 | 制約 | 備考 |
+|------|---------|-----|------|------|
+| order_id | 注文ID | INT | PK | |
+| customer_id | 顧客ID | INT | | |
+| staff_id | スタッフID | INT | | |
+| staff_name | スタッフ名 | VARCHAR(100) | | `staff_id` で決まる → 推移従属 |
+| order_date | 注文日 | DATE | | |
 
 **問題点:**
 - スタッフ名が変わったとき、そのスタッフが担当した全注文を更新する必要がある
@@ -237,51 +196,35 @@ CREATE TABLE orders_bad (
 
 ### 第3正規形に変換後
 
-```sql
-CREATE TABLE staff (
-    staff_id   INT PRIMARY KEY,
-    staff_name VARCHAR(100)
-);
+**staff（スタッフテーブル）**
 
-CREATE TABLE orders (
-    order_id    INT PRIMARY KEY,
-    customer_id INT,
-    staff_id    INT REFERENCES staff(staff_id),
-    order_date  DATE
-);
-```
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| staff_id | スタッフID | INT | PK |
+| staff_name | スタッフ名 | VARCHAR(100) | |
 
-#### テーブル定義
+**orders（注文テーブル）**
 
-**staff**
-
-| 列名 | 型 | 制約 |
-|------|-----|------|
-| staff_id | INT | PK |
-| staff_name | VARCHAR(100) | |
-
-**orders**
-
-| 列名 | 型 | 制約 |
-|------|-----|------|
-| order_id | INT | PK |
-| customer_id | INT | |
-| staff_id | INT | FK → staff |
-| order_date | DATE | |
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| order_id | 注文ID | INT | PK |
+| customer_id | 顧客ID | INT | |
+| staff_id | スタッフID | INT | FK → staff |
+| order_date | 注文日 | DATE | |
 
 ```mermaid
 erDiagram
     staff ||--o{ orders : "handles"
 
     staff {
-        INT staff_id PK
-        VARCHAR staff_name
+        INT staff_id PK "スタッフID"
+        VARCHAR staff_name "スタッフ名"
     }
     orders {
-        INT order_id PK
-        INT customer_id
-        INT staff_id FK
-        DATE order_date
+        INT order_id PK "注文ID"
+        INT customer_id "顧客ID"
+        INT staff_id FK "スタッフID"
+        DATE order_date "注文日"
     }
 ```
 
@@ -296,6 +239,8 @@ erDiagram
 | 得られる効果 | すべての更新異常・挿入異常・削除異常が解消される |
 | まだ残る課題 | 決定項が候補キーでない場合（ボイス・コッド正規形違反） |
 
+---
+
 ## 6. ボイス・コッド正規形（BCNF）
 
 ### 定義
@@ -306,63 +251,47 @@ erDiagram
 
 ### 第3正規形を満たすがBCNF違反の例
 
-```sql
--- 前提: 生徒は複数の科目を履修し、各科目は1人の教師が担当
--- 候補キー: (student_id, subject) または (student_id, teacher_id)
--- 関数従属: teacher_id → subject（教師が決まると科目が決まる）
---           しかし teacher_id は候補キーではない → BCNF違反
+前提: 生徒は複数の科目を履修し、各科目は1人の教師が担当する。
 
-CREATE TABLE enrollments_bad (
-    student_id INT,
-    subject    VARCHAR(100),
-    teacher_id INT,
-    -- teacher_id → subject だが teacher_id は候補キーでない
-    PRIMARY KEY (student_id, subject)
-);
-```
+- 候補キー: `(student_id, subject)` または `(student_id, teacher_id)`
+- 関数従属: `teacher_id → subject`（教師が決まると科目が決まる）
+- しかし `teacher_id` は候補キーではない → BCNF違反
+
+**enrollments_bad（履修テーブル・違反）**
+
+| 列名 | 日本語名 | 型 | 制約 | 備考 |
+|------|---------|-----|------|------|
+| student_id | 生徒ID | INT | PK（複合） | |
+| subject | 科目名 | VARCHAR(100) | PK（複合） | |
+| teacher_id | 教師ID | INT | | `teacher_id → subject` だが候補キーでない |
 
 ### BCNFに変換後
 
-```sql
-CREATE TABLE teacher_subjects (
-    teacher_id INT PRIMARY KEY,
-    subject    VARCHAR(100)
-);
+**teacher_subjects（教師・科目テーブル）**
 
-CREATE TABLE enrollments (
-    student_id INT,
-    teacher_id INT REFERENCES teacher_subjects(teacher_id),
-    PRIMARY KEY (student_id, teacher_id)
-);
-```
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| teacher_id | 教師ID | INT | PK |
+| subject | 科目名 | VARCHAR(100) | |
 
-#### テーブル定義
+**enrollments（履修テーブル）**
 
-**teacher_subjects**
-
-| 列名 | 型 | 制約 |
-|------|-----|------|
-| teacher_id | INT | PK |
-| subject | VARCHAR(100) | |
-
-**enrollments**
-
-| 列名 | 型 | 制約 |
-|------|-----|------|
-| student_id | INT | PK（複合） |
-| teacher_id | INT | PK（複合）, FK → teacher_subjects |
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| student_id | 生徒ID | INT | PK（複合） |
+| teacher_id | 教師ID | INT | PK（複合）, FK → teacher_subjects |
 
 ```mermaid
 erDiagram
     teacher_subjects ||--o{ enrollments : "teaches"
 
     teacher_subjects {
-        INT teacher_id PK
-        VARCHAR subject
+        INT teacher_id PK "教師ID"
+        VARCHAR subject "科目名"
     }
     enrollments {
-        INT student_id PK
-        INT teacher_id PK
+        INT student_id PK "生徒ID"
+        INT teacher_id PK "教師ID"
     }
 ```
 
@@ -387,28 +316,42 @@ erDiagram
 
 > 多値従属性: 主キーAに対して、BとCが互いに独立して複数の値を持つ場合（A →→ B かつ A →→ C）。
 
-```sql
--- 違反例: 人が複数の趣味と複数のスキルを持つ場合
--- hobby と skill は独立しているのに1テーブルに混在している
-CREATE TABLE person_hobbies_skills_bad (
-    person_id INT,
-    hobby     VARCHAR(100),
-    skill     VARCHAR(100),
-    PRIMARY KEY (person_id, hobby, skill)
-);
+#### 違反例
 
--- 第4正規形準拠: テーブルを分割する
-CREATE TABLE person_hobbies (
-    person_id INT,
-    hobby     VARCHAR(100),
-    PRIMARY KEY (person_id, hobby)
-);
+**person_hobbies_skills_bad（趣味・スキルテーブル・違反）**
 
-CREATE TABLE person_skills (
-    person_id INT,
-    skill     VARCHAR(100),
-    PRIMARY KEY (person_id, skill)
-);
+| 列名 | 日本語名 | 型 | 制約 | 備考 |
+|------|---------|-----|------|------|
+| person_id | 人物ID | INT | PK（複合） | |
+| hobby | 趣味 | VARCHAR(100) | PK（複合） | skill とは独立 |
+| skill | スキル | VARCHAR(100) | PK（複合） | hobby とは独立 |
+
+#### 第4正規形に変換後
+
+**person_hobbies（趣味テーブル）**
+
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| person_id | 人物ID | INT | PK（複合） |
+| hobby | 趣味 | VARCHAR(100) | PK（複合） |
+
+**person_skills（スキルテーブル）**
+
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| person_id | 人物ID | INT | PK（複合） |
+| skill | スキル | VARCHAR(100) | PK（複合） |
+
+```mermaid
+erDiagram
+    person_hobbies {
+        INT person_id PK "人物ID"
+        VARCHAR hobby PK "趣味"
+    }
+    person_skills {
+        INT person_id PK "人物ID"
+        VARCHAR skill PK "スキル"
+    }
 ```
 
 ### 第5正規形
@@ -421,16 +364,14 @@ CREATE TABLE person_skills (
 **時制データ**（有効期間を持つデータ）を扱うための正規形。
 例: 商品の価格が期間ごとに変わる場合に、時間軸を独立した軸として扱う。
 
-```sql
--- 第6正規形的な考え方: 期間を明示的に管理する
-CREATE TABLE product_prices (
-    product_id  INT,
-    valid_from  DATE,
-    valid_to    DATE,
-    price       NUMERIC,
-    PRIMARY KEY (product_id, valid_from)
-);
-```
+**product_prices（商品価格テーブル）**
+
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| product_id | 商品ID | INT | PK（複合） |
+| valid_from | 有効開始日 | DATE | PK（複合） |
+| valid_to | 有効終了日 | DATE | |
+| price | 価格 | NUMERIC | |
 
 ### DKNF / 第7正規形
 
@@ -461,16 +402,16 @@ CREATE TABLE product_prices (
 - **キャッシュテーブル**: 計算済みの集計値を別テーブルに保持する
 - **高トラフィックな読み取り**: 大量アクセスに対してJOINのコストを下げたい場合
 
-```sql
--- 非正規化の例: 注文テーブルに顧客名を直接持つ
--- （正規化では customers テーブルをJOINするところを、コピーして持つ）
-CREATE TABLE orders_denormalized (
-    order_id       INT PRIMARY KEY,
-    customer_id    INT,
-    customer_name  VARCHAR(100),  -- customers テーブルからコピー（冗長）
-    order_total    NUMERIC,       -- 明細の合計を事前計算（冗長）
-    order_date     DATE
-);
-```
+### 非正規化の例
+
+**orders_denormalized（注文テーブル・非正規化）**
+
+| 列名 | 日本語名 | 型 | 制約 | 備考 |
+|------|---------|-----|------|------|
+| order_id | 注文ID | INT | PK | |
+| customer_id | 顧客ID | INT | | |
+| customer_name | 顧客名 | VARCHAR(100) | | customers テーブルからコピー（冗長） |
+| order_total | 注文合計 | NUMERIC | | 明細の合計を事前計算（冗長） |
+| order_date | 注文日 | DATE | | |
 
 > **実務の指針**: まず正規化して設計し、パフォーマンス問題が実際に発生したときに限り、計測しながら非正規化を検討する。
