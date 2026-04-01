@@ -20,41 +20,38 @@
 
 すべてのデータを1つのテーブルに詰め込んだ状態から始めます。
 
-```sql
-CREATE TABLE receipts_bad (
-    receipt_id       INT,
-    receipt_date     DATE,
-    customer_id      INT,          -- NULL = 非会員
-    customer_name    VARCHAR(100), -- NULL = 非会員
-    staff_id         INT,
-    staff_name       VARCHAR(100),
-    product_id_1     INT,
-    product_name_1   VARCHAR(100),
-    category_1       VARCHAR(100),
-    price_1          NUMERIC,
-    qty_1            INT,
-    product_id_2     INT,          -- 2品目（存在しない場合はNULL）
-    product_name_2   VARCHAR(100),
-    category_2       VARCHAR(100),
-    price_2          NUMERIC,
-    qty_2            INT,
-    product_id_3     INT,          -- 3品目（存在しない場合はNULL）
-    product_name_3   VARCHAR(100),
-    category_3       VARCHAR(100),
-    price_3          NUMERIC,
-    qty_3            INT
-    -- ... 4品目以降は？
-);
+**receipts_bad（レシートテーブル・非正規形）**
 
-INSERT INTO receipts_bad VALUES (
-    1001, '2024-01-15',
-    42, '田中 花子',
-    5, '佐藤 太郎',
-    101, '牛乳', '乳製品', 198, 2,
-    202, '食パン', 'パン', 248, 1,
-    NULL, NULL, NULL, NULL, NULL
-);
-```
+| 列名 | 日本語名 | 型 | 備考 |
+|------|---------|-----|------|
+| receipt_id | レシートID | INT | |
+| receipt_date | 購入日 | DATE | |
+| customer_id | 顧客ID | INT | NULL = 非会員 |
+| customer_name | 顧客名 | VARCHAR(100) | NULL = 非会員 |
+| staff_id | スタッフID | INT | |
+| staff_name | スタッフ名 | VARCHAR(100) | |
+| product_id_1 | 商品ID（1品目） | INT | |
+| product_name_1 | 商品名（1品目） | VARCHAR(100) | |
+| category_1 | カテゴリ（1品目） | VARCHAR(100) | |
+| price_1 | 価格（1品目） | NUMERIC | |
+| qty_1 | 数量（1品目） | INT | |
+| product_id_2 | 商品ID（2品目） | INT | 存在しない場合はNULL |
+| product_name_2 | 商品名（2品目） | VARCHAR(100) | |
+| category_2 | カテゴリ（2品目） | VARCHAR(100) | |
+| price_2 | 価格（2品目） | NUMERIC | |
+| qty_2 | 数量（2品目） | INT | |
+| product_id_3 | 商品ID（3品目） | INT | 存在しない場合はNULL |
+| ... | ... | ... | 4品目以降は？ |
+
+サンプルデータ:
+
+| receipt_id | receipt_date | customer_id | customer_name | staff_id | staff_name | product_id_1 | product_name_1 | category_1 | price_1 | qty_1 | product_id_2 | product_name_2 | category_2 | price_2 | qty_2 | product_id_3 | product_name_3 | category_3 | price_3 | qty_3 |
+|-----------|------------|------------|--------------|---------|-----------|-------------|---------------|-----------|--------|------|-------------|---------------|-----------|--------|------|-------------|---------------|-----------|--------|------|
+| 1001 | 2024-01-15 | 42 | 田中 花子 | 5 | 佐藤 太郎 | 101 | 牛乳 | 乳製品 | 198 | 2 | 202 | 食パン | パン | 248 | 1 | NULL | NULL | NULL | NULL | NULL |
+| 1002 | 2024-01-15 | NULL | NULL | 5 | 佐藤 太郎 | 303 | バター | 乳製品 | 398 | 1 | NULL | NULL | NULL | NULL | NULL | NULL | NULL | NULL | NULL | NULL |
+| 1003 | 2024-01-16 | 17 | 鈴木 一郎 | 8 | 田中 次郎 | 101 | 牛乳 | 乳製品 | 198 | 1 | 404 | 卵 | 卵類 | 298 | 2 | 505 | チーズ | 乳製品 | 348 | 1 |
+| 1004 | 2024-01-16 | 42 | 田中 花子 | 8 | 田中 次郎 | 202 | 食パン | パン | 248 | 3 | NULL | NULL | NULL | NULL | NULL | NULL | NULL | NULL | NULL | NULL |
+| 1005 | 2024-01-17 | 31 | 山田 美咲 | 5 | 佐藤 太郎 | 101 | 牛乳 | 乳製品 | 198 | 1 | 303 | バター | 乳製品 | 398 | 1 | NULL | NULL | NULL | NULL | NULL |
 
 ### 発生する問題
 
@@ -73,12 +70,6 @@ INSERT INTO receipts_bad VALUES (
 **4. 削除異常**
 - レシートを削除すると、そのレシートにしか存在しない商品情報も消える
 
-### この段階のテーブル構成
-
-| テーブル | 主キー | 問題点 |
-|---------|--------|--------|
-| `receipts_bad` | なし（未定義） | 商品列が横に並んでいるため品数に上限がある。冗長データだらけで更新・挿入・削除異常が全発生 |
-
 ---
 
 次のステップでこれを段階的に修正していきます。
@@ -87,27 +78,31 @@ INSERT INTO receipts_bad VALUES (
 
 **解決すること:** 繰り返しグループ（商品列の横並び）を排除する
 
-```sql
--- 商品を行に展開する
-CREATE TABLE receipts_1nf (
-    receipt_id    INT,
-    receipt_date  DATE,
-    customer_id   INT,
-    customer_name VARCHAR(100),
-    staff_id      INT,
-    staff_name    VARCHAR(100),
-    product_id    INT,
-    product_name  VARCHAR(100),
-    category      VARCHAR(100),
-    price         NUMERIC,
-    quantity      INT,
-    PRIMARY KEY (receipt_id, product_id)
-);
+**receipts_1nf（レシートテーブル・第1正規形）**
 
-INSERT INTO receipts_1nf VALUES
-    (1001, '2024-01-15', 42, '田中 花子', 5, '佐藤 太郎', 101, '牛乳', '乳製品', 198, 2),
-    (1001, '2024-01-15', 42, '田中 花子', 5, '佐藤 太郎', 202, '食パン', 'パン', 248, 1);
-```
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| receipt_id | レシートID | INT | PK（複合） |
+| receipt_date | 購入日 | DATE | |
+| customer_id | 顧客ID | INT | NULL許容 |
+| customer_name | 顧客名 | VARCHAR(100) | NULL許容 |
+| staff_id | スタッフID | INT | |
+| staff_name | スタッフ名 | VARCHAR(100) | |
+| product_id | 商品ID | INT | PK（複合） |
+| product_name | 商品名 | VARCHAR(100) | |
+| category | カテゴリ | VARCHAR(100) | |
+| price | 価格 | NUMERIC | |
+| quantity | 数量 | INT | |
+
+サンプルデータ:
+
+| receipt_id | receipt_date | customer_id | customer_name | staff_id | staff_name | product_id | product_name | category | price | quantity |
+|-----------|------------|------------|--------------|---------|-----------|-----------|-------------|---------|-------|----------|
+| 1001 | 2024-01-15 | 42 | 田中 花子 | 5 | 佐藤 太郎 | 101 | 牛乳 | 乳製品 | 198 | 2 |
+| 1001 | 2024-01-15 | 42 | 田中 花子 | 5 | 佐藤 太郎 | 202 | 食パン | パン | 248 | 1 |
+| 1002 | 2024-01-15 | NULL | NULL | 5 | 佐藤 太郎 | 303 | バター | 乳製品 | 398 | 1 |
+| 1003 | 2024-01-16 | 17 | 鈴木 一郎 | 8 | 田中 次郎 | 101 | 牛乳 | 乳製品 | 198 | 1 |
+| 1003 | 2024-01-16 | 17 | 鈴木 一郎 | 8 | 田中 次郎 | 404 | 卵 | 卵類 | 298 | 2 |
 
 **改善されたこと:**
 - 何品買っても行を増やすだけで対応できる
@@ -118,55 +113,101 @@ INSERT INTO receipts_1nf VALUES
 - `product_name`, `category`, `price` は `product_id` だけで決まる → **部分関数従属（第2正規形違反）**
 - `staff_name` は `staff_id` だけで決まる → **部分関数従属（第2正規形違反）**
 
-### この段階のテーブル構成
-
-| テーブル | 主キー | 列数 | 意義 |
-|---------|--------|------|------|
-| `receipts_1nf` | (receipt_id, product_id) | 11列 | 繰り返しグループを排除し、商品を行単位で管理できるようになった |
-
 ---
 
 ## Step 2: 第2正規形への変換
 
 **解決すること:** 部分関数従属を排除する（主キーの一部で決まる列を別テーブルへ）
 
-```sql
--- 顧客テーブル（customer_id → customer_name）
-CREATE TABLE customers (
-    customer_id   INT PRIMARY KEY,
-    customer_name VARCHAR(100)
-);
+**customers（顧客テーブル）**
 
--- 商品テーブル（product_id → product_name, category, price）
-CREATE TABLE products (
-    product_id   INT PRIMARY KEY,
-    product_name VARCHAR(100),
-    category     VARCHAR(100),
-    price        NUMERIC
-);
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| customer_id | 顧客ID | INT | PK |
+| customer_name | 顧客名 | VARCHAR(100) | |
 
--- スタッフテーブル（staff_id → staff_name）
-CREATE TABLE staff (
-    staff_id   INT PRIMARY KEY,
-    staff_name VARCHAR(100)
-);
+サンプルデータ:
 
--- レシートヘッダー（receipt_id → receipt_date, customer_id, staff_id）
-CREATE TABLE receipts_2nf (
-    receipt_id   INT PRIMARY KEY,
-    receipt_date DATE,
-    customer_id  INT REFERENCES customers(customer_id),  -- NULL許容（非会員）
-    staff_id     INT REFERENCES staff(staff_id)
-);
+| customer_id | customer_name |
+|------------|--------------|
+| 17 | 鈴木 一郎 |
+| 31 | 山田 美咲 |
+| 42 | 田中 花子 |
+| 55 | 高橋 健太 |
+| 63 | 渡辺 恵子 |
 
--- レシート明細（receipt_id + product_id → quantity）
-CREATE TABLE receipt_items_2nf (
-    receipt_id INT REFERENCES receipts_2nf(receipt_id),
-    product_id INT REFERENCES products(product_id),
-    quantity   INT,
-    PRIMARY KEY (receipt_id, product_id)
-);
-```
+**products（商品テーブル）**
+
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| product_id | 商品ID | INT | PK |
+| product_name | 商品名 | VARCHAR(100) | |
+| category | カテゴリ | VARCHAR(100) | |
+| price | 価格 | NUMERIC | |
+
+サンプルデータ:
+
+| product_id | product_name | category | price |
+|-----------|-------------|---------|-------|
+| 101 | 牛乳 | 乳製品 | 198 |
+| 202 | 食パン | パン | 248 |
+| 303 | バター | 乳製品 | 398 |
+| 404 | 卵 | 卵類 | 298 |
+| 505 | チーズ | 乳製品 | 348 |
+
+**staff（スタッフテーブル）**
+
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| staff_id | スタッフID | INT | PK |
+| staff_name | スタッフ名 | VARCHAR(100) | |
+
+サンプルデータ:
+
+| staff_id | staff_name |
+|---------|-----------|
+| 5 | 佐藤 太郎 |
+| 8 | 田中 次郎 |
+| 12 | 山本 花子 |
+| 15 | 中村 健一 |
+| 20 | 小林 美咲 |
+
+**receipts_2nf（レシートヘッダーテーブル）**
+
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| receipt_id | レシートID | INT | PK |
+| receipt_date | 購入日 | DATE | |
+| customer_id | 顧客ID | INT | FK → customers, NULL許容 |
+| staff_id | スタッフID | INT | FK → staff |
+
+サンプルデータ:
+
+| receipt_id | receipt_date | customer_id | staff_id |
+|-----------|------------|------------|---------|
+| 1001 | 2024-01-15 | 42 | 5 |
+| 1002 | 2024-01-15 | NULL | 5 |
+| 1003 | 2024-01-16 | 17 | 8 |
+| 1004 | 2024-01-16 | 42 | 8 |
+| 1005 | 2024-01-17 | 31 | 5 |
+
+**receipt_items_2nf（レシート明細テーブル）**
+
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| receipt_id | レシートID | INT | PK（複合）, FK → receipts_2nf |
+| product_id | 商品ID | INT | PK（複合）, FK → products |
+| quantity | 数量 | INT | |
+
+サンプルデータ:
+
+| receipt_id | product_id | quantity |
+|-----------|-----------|----------|
+| 1001 | 101 | 2 |
+| 1001 | 202 | 1 |
+| 1002 | 303 | 1 |
+| 1003 | 101 | 1 |
+| 1003 | 404 | 2 |
 
 **改善されたこと:**
 - 商品名の変更は `products` テーブルの1行を更新するだけ
@@ -176,16 +217,6 @@ CREATE TABLE receipt_items_2nf (
 - `products` テーブルで `product_id → category`、かつ将来 `category → category_description` などの属性を追加すると推移関数従属（`product_id → category → category_description`）が生じる
 - → **推移関数従属（第3正規形違反）**の可能性
 
-### この段階のテーブル構成
-
-| テーブル | 主キー | 意義 |
-|---------|--------|------|
-| `customers` | customer_id | 顧客情報を独立管理。1箇所の更新で全レシートに反映される |
-| `products` | product_id | 商品情報を独立管理。価格・名称変更が容易になった |
-| `staff` | staff_id | スタッフ情報を独立管理。スタッフ名変更の更新異常を解消 |
-| `receipts_2nf` | receipt_id | レシートのヘッダー情報のみ保持。明細は別テーブルへ |
-| `receipt_items_2nf` | (receipt_id, product_id) | レシートと商品の紐付け。何品でも対応可能 |
-
 ```mermaid
 erDiagram
     customers ||--o{ receipts_2nf : "makes"
@@ -194,29 +225,29 @@ erDiagram
     products ||--o{ receipt_items_2nf : "included_in"
 
     customers {
-        INT customer_id PK
-        VARCHAR customer_name
+        INT customer_id PK "顧客ID"
+        VARCHAR customer_name "顧客名"
     }
     products {
-        INT product_id PK
-        VARCHAR product_name
-        VARCHAR category
-        NUMERIC price
+        INT product_id PK "商品ID"
+        VARCHAR product_name "商品名"
+        VARCHAR category "カテゴリ"
+        NUMERIC price "価格"
     }
     staff {
-        INT staff_id PK
-        VARCHAR staff_name
+        INT staff_id PK "スタッフID"
+        VARCHAR staff_name "スタッフ名"
     }
     receipts_2nf {
-        INT receipt_id PK
-        DATE receipt_date
-        INT customer_id FK
-        INT staff_id FK
+        INT receipt_id PK "レシートID"
+        DATE receipt_date "購入日"
+        INT customer_id FK "顧客ID"
+        INT staff_id FK "スタッフID"
     }
     receipt_items_2nf {
-        INT receipt_id FK
-        INT product_id FK
-        INT quantity
+        INT receipt_id FK "レシートID"
+        INT product_id FK "商品ID"
+        INT quantity "数量"
     }
 ```
 
@@ -226,60 +257,72 @@ erDiagram
 
 **解決すること:** 推移関数従属を排除する（非キー列が他の非キー列を通じて決まる関係を切り離す）
 
-```sql
--- カテゴリテーブルを分離（category_name → category_description など将来の拡張も見据えて）
-CREATE TABLE categories (
-    category_id   INT PRIMARY KEY,
-    category_name VARCHAR(100)
-);
+**categories（カテゴリテーブル）** ← 新規追加
 
--- 商品テーブル（カテゴリIDで参照）
-CREATE TABLE products (
-    product_id   INT PRIMARY KEY,
-    product_name VARCHAR(100),
-    category_id  INT REFERENCES categories(category_id),
-    price        NUMERIC
-);
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| category_id | カテゴリID | INT | PK |
+| category_name | カテゴリ名 | VARCHAR(100) | |
 
--- 顧客テーブル（変更なし）
-CREATE TABLE customers (
-    customer_id   INT PRIMARY KEY,
-    customer_name VARCHAR(100)
-);
+サンプルデータ:
 
--- スタッフテーブル（変更なし）
-CREATE TABLE staff (
-    staff_id   INT PRIMARY KEY,
-    staff_name VARCHAR(100)
-);
+| category_id | category_name |
+|------------|--------------|
+| 1 | 乳製品 |
+| 2 | パン |
+| 3 | 卵類 |
+| 4 | 野菜 |
+| 5 | 飲料 |
 
--- レシートヘッダー（変更なし）
-CREATE TABLE receipts (
-    receipt_id   INT PRIMARY KEY,
-    receipt_date DATE,
-    customer_id  INT REFERENCES customers(customer_id),  -- NULL = 非会員
-    staff_id     INT REFERENCES staff(staff_id)
-);
+**products（商品テーブル）** ← `category` を `category_id`（FK）に変更
 
--- レシート明細（変更なし）
-CREATE TABLE receipt_items (
-    receipt_id INT REFERENCES receipts(receipt_id),
-    product_id INT REFERENCES products(product_id),
-    quantity   INT,
-    PRIMARY KEY (receipt_id, product_id)
-);
-```
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| product_id | 商品ID | INT | PK |
+| product_name | 商品名 | VARCHAR(100) | |
+| category_id | カテゴリID | INT | FK → categories |
+| price | 価格 | NUMERIC | |
 
-### この段階のテーブル構成
+サンプルデータ:
 
-| テーブル | 主キー | 意義 |
-|---------|--------|------|
-| `categories` | category_id | カテゴリを独立管理。`products` から推移従属を排除 |
-| `products` | product_id | category_id（外部キー）でカテゴリを参照。推移従属が解消された |
-| `customers` | customer_id | 変更なし |
-| `staff` | staff_id | 変更なし |
-| `receipts` | receipt_id | 変更なし（命名を最終形に） |
-| `receipt_items` | (receipt_id, product_id) | 変更なし（命名を最終形に） |
+| product_id | product_name | category_id | price |
+|-----------|-------------|------------|-------|
+| 101 | 牛乳 | 1 | 198 |
+| 202 | 食パン | 2 | 248 |
+| 303 | バター | 1 | 398 |
+| 404 | 卵 | 3 | 298 |
+| 505 | チーズ | 1 | 348 |
+
+**customers（顧客テーブル）** ← 変更なし
+
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| customer_id | 顧客ID | INT | PK |
+| customer_name | 顧客名 | VARCHAR(100) | |
+
+**staff（スタッフテーブル）** ← 変更なし
+
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| staff_id | スタッフID | INT | PK |
+| staff_name | スタッフ名 | VARCHAR(100) | |
+
+**receipts（レシートヘッダーテーブル）** ← 命名を最終形に
+
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| receipt_id | レシートID | INT | PK |
+| receipt_date | 購入日 | DATE | |
+| customer_id | 顧客ID | INT | FK → customers, NULL許容 |
+| staff_id | スタッフID | INT | FK → staff |
+
+**receipt_items（レシート明細テーブル）** ← 命名を最終形に
+
+| 列名 | 日本語名 | 型 | 制約 |
+|------|---------|-----|------|
+| receipt_id | レシートID | INT | PK（複合）, FK → receipts |
+| product_id | 商品ID | INT | PK（複合）, FK → products |
+| quantity | 数量 | INT | |
 
 ```mermaid
 erDiagram
@@ -290,33 +333,33 @@ erDiagram
     products ||--o{ receipt_items : "included_in"
 
     categories {
-        INT category_id PK
-        VARCHAR category_name
+        INT category_id PK "カテゴリID"
+        VARCHAR category_name "カテゴリ名"
     }
     products {
-        INT product_id PK
-        VARCHAR product_name
-        INT category_id FK
-        NUMERIC price
+        INT product_id PK "商品ID"
+        VARCHAR product_name "商品名"
+        INT category_id FK "カテゴリID"
+        NUMERIC price "価格"
     }
     customers {
-        INT customer_id PK
-        VARCHAR customer_name
+        INT customer_id PK "顧客ID"
+        VARCHAR customer_name "顧客名"
     }
     staff {
-        INT staff_id PK
-        VARCHAR staff_name
+        INT staff_id PK "スタッフID"
+        VARCHAR staff_name "スタッフ名"
     }
     receipts {
-        INT receipt_id PK
-        DATE receipt_date
-        INT customer_id FK
-        INT staff_id FK
+        INT receipt_id PK "レシートID"
+        DATE receipt_date "購入日"
+        INT customer_id FK "顧客ID"
+        INT staff_id FK "スタッフID"
     }
     receipt_items {
-        INT receipt_id FK
-        INT product_id FK
-        INT quantity
+        INT receipt_id FK "レシートID"
+        INT product_id FK "商品ID"
+        INT quantity "数量"
     }
 ```
 
@@ -324,38 +367,26 @@ erDiagram
 
 ## 解答まとめ
 
-### 最終テーブル構成
+### 各テーブルの役割
 
-```
-categories
-├── category_id (PK)
-└── category_name
+| テーブル | 日本語名 | 役割 |
+|---------|---------|------|
+| `categories` | カテゴリ | 商品カテゴリのマスター |
+| `products` | 商品 | 商品マスター（名前・価格・カテゴリ） |
+| `customers` | 顧客 | 会員顧客マスター |
+| `staff` | スタッフ | レジ担当スタッフマスター |
+| `receipts` | レシート | 購入トランザクションのヘッダー（いつ・誰が・誰に） |
+| `receipt_items` | レシート明細 | レシートの明細（何を・何個） |
 
-products
-├── product_id (PK)
-├── product_name
-├── category_id (FK → categories)
-└── price
+### 正規化の効果
 
-customers
-├── customer_id (PK)
-└── customer_name
-
-staff
-├── staff_id (PK)
-└── staff_name
-
-receipts
-├── receipt_id (PK)
-├── receipt_date
-├── customer_id (FK → customers, NULL許容)
-└── staff_id (FK → staff)
-
-receipt_items
-├── receipt_id (FK → receipts) ┐ 複合PK
-├── product_id (FK → products) ┘
-└── quantity
-```
+| 問題 | 解決方法 |
+|-----|---------|
+| 商品名変更 | `products` の1行のみ更新 |
+| スタッフ名変更 | `staff` の1行のみ更新 |
+| カテゴリ追加 | `categories` に1行追加するだけ |
+| 新商品登録 | 購入前から `products` に登録可能 |
+| 何品でも対応 | `receipt_items` に行を追加するだけ |
 
 ### ER図
 
@@ -368,53 +399,32 @@ erDiagram
     products ||--o{ receipt_items : "included_in"
 
     categories {
-        INT category_id PK
-        VARCHAR category_name
+        INT category_id PK "カテゴリID"
+        VARCHAR category_name "カテゴリ名"
     }
     products {
-        INT product_id PK
-        VARCHAR product_name
-        INT category_id FK
-        NUMERIC price
+        INT product_id PK "商品ID"
+        VARCHAR product_name "商品名"
+        INT category_id FK "カテゴリID"
+        NUMERIC price "価格"
     }
     customers {
-        INT customer_id PK
-        VARCHAR customer_name
+        INT customer_id PK "顧客ID"
+        VARCHAR customer_name "顧客名"
     }
     staff {
-        INT staff_id PK
-        VARCHAR staff_name
+        INT staff_id PK "スタッフID"
+        VARCHAR staff_name "スタッフ名"
     }
     receipts {
-        INT receipt_id PK
-        DATE receipt_date
-        INT customer_id FK
-        INT staff_id FK
+        INT receipt_id PK "レシートID"
+        DATE receipt_date "購入日"
+        INT customer_id FK "顧客ID"
+        INT staff_id FK "スタッフID"
     }
     receipt_items {
-        INT receipt_id FK
-        INT product_id FK
-        INT quantity
+        INT receipt_id FK "レシートID"
+        INT product_id FK "商品ID"
+        INT quantity "数量"
     }
 ```
-
-### 各テーブルの役割
-
-| テーブル | 役割 |
-|---------|------|
-| `categories` | 商品カテゴリのマスター |
-| `products` | 商品マスター（名前・価格・カテゴリ） |
-| `customers` | 会員顧客マスター |
-| `staff` | レジ担当スタッフマスター |
-| `receipts` | 購入トランザクションのヘッダー（いつ・誰が・誰に） |
-| `receipt_items` | レシートの明細（何を・何個） |
-
-### 正規化の効果
-
-| 問題 | 解決方法 |
-|-----|---------|
-| 商品名変更 | `products` の1行のみ更新 |
-| スタッフ名変更 | `staff` の1行のみ更新 |
-| カテゴリ追加 | `categories` に1行追加するだけ |
-| 新商品登録 | 購入前から `products` に登録可能 |
-| 何品でも対応 | `receipt_items` に行を追加するだけ |
