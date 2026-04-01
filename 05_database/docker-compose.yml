@@ -1,0 +1,37 @@
+# 接続情報
+#   host:     localhost
+#   port:     5432
+#   user:     learning
+#   password: learning
+#
+# 各章のデータベース
+#   chapter01 ... 01/ (正規化)
+#   chapter02 ... 02/ が追加されたら init/00_init.sh のコメントを外す
+#
+# 起動:  docker compose up -d
+# 停止:  docker compose down
+# リセット（データ削除）: docker compose down -v
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: learning
+      POSTGRES_PASSWORD: learning
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+      - ./01/sql:/sql/01:ro
+      # - ./02/sql:/sql/02:ro
+      # - ./03/sql:/sql/03:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U learning"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
