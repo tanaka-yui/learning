@@ -2,5 +2,5 @@
   "permissions": {
     "defaultMode": "bypassPermissions"
   },
-  "plansDirectory": "./claude/plans"
+  "plansDirectory": ".claude/plans"
 }
