@@ -156,11 +156,14 @@ INSERT INTO stamps (name) VALUES
 
 -- フォロー: 50,000件（1ユーザーあたり平均50フォロー）
 INSERT INTO follows (user_id, follow_user_id, created_at)
-SELECT DISTINCT
-    (random() * 999 + 1)::INT,
-    (random() * 999 + 1)::INT,
-    NOW() - (random() * INTERVAL '300 days')
-FROM generate_series(1, 60000)   -- 重複除去のため多めに生成
+SELECT DISTINCT u1, u2, NOW() - (random() * INTERVAL '300 days')
+FROM (
+    SELECT
+        (random() * 999 + 1)::INT AS u1,
+        (random() * 999 + 1)::INT AS u2
+    FROM generate_series(1, 60000)   -- 重複除去のため多めに生成
+) t
+WHERE t.u1 <> t.u2
 ON CONFLICT DO NOTHING;
 
 -- 投稿: 100,000件
@@ -223,20 +226,26 @@ ON CONFLICT DO NOTHING;
 
 -- ブロック: 5,000件
 INSERT INTO user_blocks (user_id, block_user_id, created_at)
-SELECT DISTINCT
-    (random() * 999 + 1)::INT,
-    (random() * 999 + 1)::INT,
-    NOW() - (random() * INTERVAL '300 days')
-FROM generate_series(1, 7000)
+SELECT DISTINCT u1, u2, NOW() - (random() * INTERVAL '300 days')
+FROM (
+    SELECT
+        (random() * 999 + 1)::INT AS u1,
+        (random() * 999 + 1)::INT AS u2
+    FROM generate_series(1, 7000)
+) t
+WHERE t.u1 <> t.u2
 ON CONFLICT DO NOTHING;
 
 -- ミュート: 5,000件
 INSERT INTO user_mutes (user_id, mute_user_id, created_at)
-SELECT DISTINCT
-    (random() * 999 + 1)::INT,
-    (random() * 999 + 1)::INT,
-    NOW() - (random() * INTERVAL '300 days')
-FROM generate_series(1, 7000)
+SELECT DISTINCT u1, u2, NOW() - (random() * INTERVAL '300 days')
+FROM (
+    SELECT
+        (random() * 999 + 1)::INT AS u1,
+        (random() * 999 + 1)::INT AS u2
+    FROM generate_series(1, 7000)
+) t
+WHERE t.u1 <> t.u2
 ON CONFLICT DO NOTHING;
 
 -- 統計情報を最新化（EXPLAIN の推定を正確にする）
