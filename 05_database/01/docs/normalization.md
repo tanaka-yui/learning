@@ -86,6 +86,25 @@ INSERT INTO orders VALUES (2, '鈴木 一郎', '卵');
 INSERT INTO orders VALUES (2, '鈴木 一郎', 'バター');
 ```
 
+#### テーブル定義
+
+**orders**
+
+| 列名 | 型 | 制約 |
+|------|-----|------|
+| order_id | INT | PK（複合） |
+| customer | VARCHAR(100) | |
+| item | VARCHAR(100) | PK（複合） |
+
+```mermaid
+erDiagram
+    orders {
+        INT order_id PK
+        VARCHAR customer
+        VARCHAR item PK
+    }
+```
+
 **まだ残っている問題点:**
 - `customer` が `order_id` だけでなく `item` にも依存しているように見える（実際は `order_id` だけで決まる）
 - → **部分関数従属**が存在する（第2正規形違反）
@@ -141,6 +160,38 @@ CREATE TABLE order_items (
     quantity    INT,
     PRIMARY KEY (order_id, product_id)
 );
+```
+
+#### テーブル定義
+
+**products**
+
+| 列名 | 型 | 制約 |
+|------|-----|------|
+| product_id | INT | PK |
+| product_name | VARCHAR(100) | |
+
+**order_items**
+
+| 列名 | 型 | 制約 |
+|------|-----|------|
+| order_id | INT | PK（複合） |
+| product_id | INT | PK（複合）, FK → products |
+| quantity | INT | |
+
+```mermaid
+erDiagram
+    products ||--o{ order_items : "included_in"
+
+    products {
+        INT product_id PK
+        VARCHAR product_name
+    }
+    order_items {
+        INT order_id PK
+        INT product_id PK
+        INT quantity
+    }
 ```
 
 **まだ残っている問題点:**
@@ -200,6 +251,40 @@ CREATE TABLE orders (
 );
 ```
 
+#### テーブル定義
+
+**staff**
+
+| 列名 | 型 | 制約 |
+|------|-----|------|
+| staff_id | INT | PK |
+| staff_name | VARCHAR(100) | |
+
+**orders**
+
+| 列名 | 型 | 制約 |
+|------|-----|------|
+| order_id | INT | PK |
+| customer_id | INT | |
+| staff_id | INT | FK → staff |
+| order_date | DATE | |
+
+```mermaid
+erDiagram
+    staff ||--o{ orders : "handles"
+
+    staff {
+        INT staff_id PK
+        VARCHAR staff_name
+    }
+    orders {
+        INT order_id PK
+        INT customer_id
+        INT staff_id FK
+        DATE order_date
+    }
+```
+
 これで更新異常・挿入異常・削除異常がすべて解消されます。
 
 ### 第3正規形の意義
@@ -249,6 +334,36 @@ CREATE TABLE enrollments (
     teacher_id INT REFERENCES teacher_subjects(teacher_id),
     PRIMARY KEY (student_id, teacher_id)
 );
+```
+
+#### テーブル定義
+
+**teacher_subjects**
+
+| 列名 | 型 | 制約 |
+|------|-----|------|
+| teacher_id | INT | PK |
+| subject | VARCHAR(100) | |
+
+**enrollments**
+
+| 列名 | 型 | 制約 |
+|------|-----|------|
+| student_id | INT | PK（複合） |
+| teacher_id | INT | PK（複合）, FK → teacher_subjects |
+
+```mermaid
+erDiagram
+    teacher_subjects ||--o{ enrollments : "teaches"
+
+    teacher_subjects {
+        INT teacher_id PK
+        VARCHAR subject
+    }
+    enrollments {
+        INT student_id PK
+        INT teacher_id PK
+    }
 ```
 
 ### ボイス・コッド正規形の意義
