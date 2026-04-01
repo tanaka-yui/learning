@@ -58,7 +58,7 @@ INSERT INTO receipts_bad VALUES (
 
 ### 発生する問題
 
-**1. 繰り返しグループ（1NF違反）**
+**1. 繰り返しグループ（第1正規形違反）**
 - 商品列が `product_id_1`, `product_id_2`, `product_id_3` と横に並んでいる
 - 4品目以上を買うとテーブル定義を変えなければならない
 - 「牛乳を買った全レシートを検索する」クエリが極めて複雑になる
@@ -73,11 +73,17 @@ INSERT INTO receipts_bad VALUES (
 **4. 削除異常**
 - レシートを削除すると、そのレシートにしか存在しない商品情報も消える
 
+### この段階のテーブル構成
+
+| テーブル | 主キー | 問題点 |
+|---------|--------|--------|
+| `receipts_bad` | なし（未定義） | 商品列が横に並んでいるため品数に上限がある。冗長データだらけで更新・挿入・削除異常が全発生 |
+
 ---
 
 次のステップでこれを段階的に修正していきます。
 
-## Step 1: 1NFへの変換
+## Step 1: 第1正規形への変換
 
 **解決すること:** 繰り返しグループ（商品列の横並び）を排除する
 
@@ -108,13 +114,19 @@ INSERT INTO receipts_1nf VALUES
 - 「牛乳を買った全レシート」が `WHERE product_name = '牛乳'` で検索できる
 
 **まだ残っている問題点:**
-- `customer_name` は `customer_id` だけで決まる（主キー全体ではなく一部で決まる）→ **部分関数従属（2NF違反）**
-- `product_name`, `category`, `price` は `product_id` だけで決まる → **部分関数従属（2NF違反）**
-- `staff_name` は `staff_id` だけで決まる → **部分関数従属（2NF違反）**
+- `customer_name` は `customer_id` だけで決まる（主キー全体ではなく一部で決まる）→ **部分関数従属（第2正規形違反）**
+- `product_name`, `category`, `price` は `product_id` だけで決まる → **部分関数従属（第2正規形違反）**
+- `staff_name` は `staff_id` だけで決まる → **部分関数従属（第2正規形違反）**
+
+### この段階のテーブル構成
+
+| テーブル | 主キー | 列数 | 意義 |
+|---------|--------|------|------|
+| `receipts_1nf` | (receipt_id, product_id) | 11列 | 繰り返しグループを排除し、商品を行単位で管理できるようになった |
 
 ---
 
-## Step 2: 2NFへの変換
+## Step 2: 第2正規形への変換
 
 **解決すること:** 部分関数従属を排除する（主キーの一部で決まる列を別テーブルへ）
 
@@ -162,11 +174,55 @@ CREATE TABLE receipt_items_2nf (
 
 **まだ残っている問題点:**
 - `products` テーブルで `product_id → category`、かつ将来 `category → category_description` などの属性を追加すると推移関数従属（`product_id → category → category_description`）が生じる
-- → **推移関数従属（3NF違反）**の可能性
+- → **推移関数従属（第3正規形違反）**の可能性
+
+### この段階のテーブル構成
+
+| テーブル | 主キー | 意義 |
+|---------|--------|------|
+| `customers` | customer_id | 顧客情報を独立管理。1箇所の更新で全レシートに反映される |
+| `products` | product_id | 商品情報を独立管理。価格・名称変更が容易になった |
+| `staff` | staff_id | スタッフ情報を独立管理。スタッフ名変更の更新異常を解消 |
+| `receipts_2nf` | receipt_id | レシートのヘッダー情報のみ保持。明細は別テーブルへ |
+| `receipt_items_2nf` | (receipt_id, product_id) | レシートと商品の紐付け。何品でも対応可能 |
+
+```mermaid
+erDiagram
+    customers ||--o{ receipts_2nf : "makes"
+    staff ||--o{ receipts_2nf : "handles"
+    receipts_2nf ||--|{ receipt_items_2nf : "contains"
+    products ||--o{ receipt_items_2nf : "included_in"
+
+    customers {
+        INT customer_id PK
+        VARCHAR customer_name
+    }
+    products {
+        INT product_id PK
+        VARCHAR product_name
+        VARCHAR category
+        NUMERIC price
+    }
+    staff {
+        INT staff_id PK
+        VARCHAR staff_name
+    }
+    receipts_2nf {
+        INT receipt_id PK
+        DATE receipt_date
+        INT customer_id FK
+        INT staff_id FK
+    }
+    receipt_items_2nf {
+        INT receipt_id FK
+        INT product_id FK
+        INT quantity
+    }
+```
 
 ---
 
-## Step 3: 3NFへの変換
+## Step 3: 第3正規形への変換
 
 **解決すること:** 推移関数従属を排除する（非キー列が他の非キー列を通じて決まる関係を切り離す）
 
@@ -214,6 +270,56 @@ CREATE TABLE receipt_items (
 );
 ```
 
+### この段階のテーブル構成
+
+| テーブル | 主キー | 意義 |
+|---------|--------|------|
+| `categories` | category_id | カテゴリを独立管理。`products` から推移従属を排除 |
+| `products` | product_id | category_id（外部キー）でカテゴリを参照。推移従属が解消された |
+| `customers` | customer_id | 変更なし |
+| `staff` | staff_id | 変更なし |
+| `receipts` | receipt_id | 変更なし（命名を最終形に） |
+| `receipt_items` | (receipt_id, product_id) | 変更なし（命名を最終形に） |
+
+```mermaid
+erDiagram
+    categories ||--o{ products : "categorizes"
+    customers ||--o{ receipts : "makes"
+    staff ||--o{ receipts : "handles"
+    receipts ||--|{ receipt_items : "contains"
+    products ||--o{ receipt_items : "included_in"
+
+    categories {
+        INT category_id PK
+        VARCHAR category_name
+    }
+    products {
+        INT product_id PK
+        VARCHAR product_name
+        INT category_id FK
+        NUMERIC price
+    }
+    customers {
+        INT customer_id PK
+        VARCHAR customer_name
+    }
+    staff {
+        INT staff_id PK
+        VARCHAR staff_name
+    }
+    receipts {
+        INT receipt_id PK
+        DATE receipt_date
+        INT customer_id FK
+        INT staff_id FK
+    }
+    receipt_items {
+        INT receipt_id FK
+        INT product_id FK
+        INT quantity
+    }
+```
+
 ---
 
 ## 解答まとめ
@@ -249,6 +355,47 @@ receipt_items
 ├── receipt_id (FK → receipts) ┐ 複合PK
 ├── product_id (FK → products) ┘
 └── quantity
+```
+
+### ER図
+
+```mermaid
+erDiagram
+    categories ||--o{ products : "categorizes"
+    customers ||--o{ receipts : "makes"
+    staff ||--o{ receipts : "handles"
+    receipts ||--|{ receipt_items : "contains"
+    products ||--o{ receipt_items : "included_in"
+
+    categories {
+        INT category_id PK
+        VARCHAR category_name
+    }
+    products {
+        INT product_id PK
+        VARCHAR product_name
+        INT category_id FK
+        NUMERIC price
+    }
+    customers {
+        INT customer_id PK
+        VARCHAR customer_name
+    }
+    staff {
+        INT staff_id PK
+        VARCHAR staff_name
+    }
+    receipts {
+        INT receipt_id PK
+        DATE receipt_date
+        INT customer_id FK
+        INT staff_id FK
+    }
+    receipt_items {
+        INT receipt_id FK
+        INT product_id FK
+        INT quantity
+    }
 ```
 
 ### 各テーブルの役割
