@@ -274,7 +274,141 @@ LIMIT 20;
 
 ## 3. アンカーモデル
 
-（後続タスクで追記）
+### 概念
+
+**「1つの属性ごとに1つのテーブルを作る」** 超正規化の設計手法です。
+
+正規化モデルでは `users` テーブルに `display_name`, `bio`, `created_at` などをまとめます。アンカーモデルでは各属性を独立したテーブルに分離します。
+
+- **アンカーテーブル**: 主キーのみを持つ最小限のテーブル
+- **アトリビュートテーブル**: 属性ごとの独立したテーブル
+
+カラムを追加するとき、既存のテーブルへの `ALTER TABLE` が不要になります。
+
+### 適用例
+
+`users` テーブルの属性を分離します。
+
+**テーブル定義（user_anchor — アンカー本体）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| id | UUID (UUIDv7) | ユーザーID（PK） |
+| created_at | TIMESTAMPTZ | アカウント作成日時（NOT NULL） |
+
+サンプルデータ:
+
+| id | created_at |
+|----|------------|
+| 01905a3b-... | 2025-06-15 09:23:00+09 |
+| 01905a3c-... | 2025-07-02 14:05:00+09 |
+| 01905a3d-... | 2025-08-20 18:44:00+09 |
+
+**テーブル定義（user_display_name — 表示名属性）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| user_id | UUID | ユーザーID（PK・FK → user_anchor） |
+| display_name | VARCHAR(100) | 表示名（NOT NULL） |
+| updated_at | TIMESTAMPTZ | 最終更新日時（NOT NULL） |
+
+サンプルデータ:
+
+| user_id | display_name | updated_at |
+|---------|-------------|------------|
+| 01905a3b-... | 田中 花子 | 2025-06-15 09:23:00+09 |
+| 01905a3c-... | 鈴木 一郎 | 2025-07-02 14:05:00+09 |
+| 01905a3d-... | 佐藤 美咲 | 2025-08-20 18:44:00+09 |
+
+**テーブル定義（user_bio — 自己紹介文属性）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| user_id | UUID | ユーザーID（PK・FK → user_anchor） |
+| bio | TEXT | 自己紹介文（NOT NULL） |
+| updated_at | TIMESTAMPTZ | 最終更新日時（NOT NULL） |
+
+サンプルデータ:
+
+| user_id | bio | updated_at |
+|---------|-----|------------|
+| 01905a3b-... | 日常をつぶやきます。 | 2025-06-15 09:23:00+09 |
+| 01905a3c-... | 技術ブログも書いています。 | 2025-07-02 14:05:00+09 |
+
+> `user_bio` に行がないユーザーは bio 未設定（01905a3d-... は登録なし）。
+
+```mermaid
+erDiagram
+    user_anchor ||--o| user_display_name : "表示名属性"
+    user_anchor ||--o| user_bio : "自己紹介文属性"
+
+    user_anchor {
+        UUID id PK
+        TIMESTAMPTZ created_at
+    }
+    user_display_name {
+        UUID user_id PK
+        VARCHAR display_name
+        TIMESTAMPTZ updated_at
+    }
+    user_bio {
+        UUID user_id PK
+        TEXT bio
+        TIMESTAMPTZ updated_at
+    }
+```
+
+### クエリ例
+
+**ユーザー情報をフル取得**
+
+```sql
+SELECT
+    ua.id,
+    udn.display_name,
+    ub.bio,
+    ua.created_at
+FROM user_anchor ua
+LEFT JOIN user_display_name udn ON udn.user_id = ua.id
+LEFT JOIN user_bio          ub  ON ub.user_id  = ua.id
+WHERE ua.id = :'user_id';
+```
+
+**新属性（website URL）の追加 — ALTER TABLE 不要**
+
+正規化モデルなら `ALTER TABLE users ADD COLUMN website VARCHAR(255)` が必要です。
+アンカーモデルでは新テーブルを作るだけで既存テーブルに影響しません。
+
+```sql
+-- 新しい属性テーブルを追加するだけ（既存テーブルへの変更なし）
+CREATE TABLE user_website (
+    user_id    UUID PRIMARY KEY REFERENCES user_anchor(id),
+    website    VARCHAR(255) NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 取得クエリにテーブルを追加するだけ
+SELECT
+    ua.id,
+    udn.display_name,
+    ub.bio,
+    uw.website,
+    ua.created_at
+FROM user_anchor ua
+LEFT JOIN user_display_name udn ON udn.user_id = ua.id
+LEFT JOIN user_bio          ub  ON ub.user_id  = ua.id
+LEFT JOIN user_website      uw  ON uw.user_id  = ua.id
+WHERE ua.id = :'user_id';
+```
+
+### トレードオフ
+
+| 観点 | 内容 |
+|------|------|
+| カラム追加の影響 | 新テーブル作成のみ。既存テーブル・既存クエリへの影響がゼロ |
+| JOIN の複雑度 | 属性が増えるほど LEFT JOIN が増え、クエリが長くなる |
+| 可読性 | テーブル数が多く、スキーマを把握しにくい |
+| 向いているケース | 属性の追加・変更が頻繁なSaaS（テナントごとにカスタム属性を持つ場合など） |
 
 ---
 
