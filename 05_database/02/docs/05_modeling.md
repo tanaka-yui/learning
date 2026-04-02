@@ -414,7 +414,145 @@ WHERE ua.id = :'user_id';
 
 ## 4. スター型スキーマ
 
-（後続タスクで追記）
+### 概念
+
+**「集計・分析クエリの高速化のために、事実（数値）と属性（マスター）を分離する」** OLAP 向けの設計手法です。
+
+- **ファクトテーブル**: 計測・記録したい数値（投稿数・いいね数など）を持つ中心テーブル
+- **ディメンションテーブル**: ファクトの文脈を説明するマスターテーブル（ユーザー・日付など）
+
+ERダイアグラムが星形に見えることから「スター型」と呼ばれます。
+通常の正規化スキーマ（OLTP）はトランザクションの整合性に最適化されていますが、スター型は**集計・分析クエリ**に最適化されています。
+
+### 適用例
+
+SNS の投稿分析ダッシュボード（「月別ユーザーごとの投稿数・いいね数」など）を題材にします。
+
+**テーブル定義（fact_post_events — ファクトテーブル）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| post_id | UUID (UUIDv7) | 投稿ID（PK） |
+| user_id | UUID | 投稿者ID（FK → dim_user） |
+| date_id | DATE | 投稿日（FK → dim_date） |
+| like_count | INT | いいね数（NOT NULL DEFAULT 0、スナップショット） |
+| reply_count | INT | リプライ数（NOT NULL DEFAULT 0、スナップショット） |
+| stamp_count | INT | スタンプ数（NOT NULL DEFAULT 0、スナップショット） |
+| hashtag_count | INT | タグ数（NOT NULL DEFAULT 0） |
+
+サンプルデータ:
+
+| post_id | user_id | date_id | like_count | reply_count | stamp_count | hashtag_count |
+|---------|---------|---------|-----------|------------|------------|--------------|
+| 01906b1a-... | 01905a3b-... | 2025-10-01 | 15 | 3 | 2 | 2 |
+| 01906b1b-... | 01905a3c-... | 2025-10-01 | 7 | 1 | 0 | 1 |
+| 01906b1c-... | 01905a3b-... | 2025-10-02 | 22 | 5 | 4 | 0 |
+| 01906b1d-... | 01905a3d-... | 2025-10-02 | 3 | 0 | 1 | 3 |
+
+**テーブル定義（dim_user — ユーザーディメンション）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| user_id | UUID | ユーザーID（PK） |
+| display_name | VARCHAR(100) | 表示名（NOT NULL、分析用スナップショット） |
+| registered_month | VARCHAR(7) | 登録月（NOT NULL、例: `'2025-06'`） |
+
+サンプルデータ:
+
+| user_id | display_name | registered_month |
+|---------|-------------|-----------------|
+| 01905a3b-... | 田中 花子 | 2025-06 |
+| 01905a3c-... | 鈴木 一郎 | 2025-07 |
+| 01905a3d-... | 佐藤 美咲 | 2025-08 |
+
+**テーブル定義（dim_date — 日付ディメンション）:**
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| date_id | DATE | 日付（PK） |
+| year | SMALLINT | 年（NOT NULL） |
+| month | SMALLINT | 月（NOT NULL、1〜12） |
+| day | SMALLINT | 日（NOT NULL） |
+| day_of_week | VARCHAR(10) | 曜日（NOT NULL、例: `'Monday'`） |
+| is_weekend | BOOLEAN | 週末フラグ（NOT NULL） |
+
+サンプルデータ:
+
+| date_id | year | month | day | day_of_week | is_weekend |
+|---------|------|-------|-----|-------------|------------|
+| 2025-10-01 | 2025 | 10 | 1 | Wednesday | false |
+| 2025-10-02 | 2025 | 10 | 2 | Thursday | false |
+| 2025-10-04 | 2025 | 10 | 4 | Saturday | true |
+
+```mermaid
+erDiagram
+    fact_post_events }o--|| dim_user : "投稿者"
+    fact_post_events }o--|| dim_date : "投稿日"
+
+    fact_post_events {
+        UUID post_id PK
+        UUID user_id FK
+        DATE date_id FK
+        INT like_count
+        INT reply_count
+        INT stamp_count
+        INT hashtag_count
+    }
+    dim_user {
+        UUID user_id PK
+        VARCHAR display_name
+        VARCHAR registered_month
+    }
+    dim_date {
+        DATE date_id PK
+        SMALLINT year
+        SMALLINT month
+        SMALLINT day
+        BOOLEAN is_weekend
+    }
+```
+
+### クエリ例
+
+**月別・ユーザー別の投稿数・いいね数合計**
+
+```sql
+SELECT
+    dd.year,
+    dd.month,
+    du.display_name,
+    COUNT(fpe.post_id)   AS post_count,
+    SUM(fpe.like_count)  AS total_likes
+FROM fact_post_events fpe
+JOIN dim_user du ON du.user_id = fpe.user_id
+JOIN dim_date dd ON dd.date_id = fpe.date_id
+WHERE dd.year = 2025 AND dd.month = 10
+GROUP BY dd.year, dd.month, du.display_name
+ORDER BY total_likes DESC;
+```
+
+**週末と平日の投稿数比較**
+
+```sql
+SELECT
+    dd.is_weekend,
+    COUNT(fpe.post_id)              AS post_count,
+    AVG(fpe.like_count)::NUMERIC(10,2) AS avg_likes
+FROM fact_post_events fpe
+JOIN dim_date dd ON dd.date_id = fpe.date_id
+GROUP BY dd.is_weekend;
+```
+
+通常の正規化スキーマ（posts, post_favorites を毎回 COUNT/JOIN）では全件スキャンになるところを、事前集計されたファクトテーブルへの JOIN だけで高速に取得できます。
+
+### トレードオフ
+
+| 観点 | 内容 |
+|------|------|
+| 集計速度 | GROUP BY + JOIN が少なく、分析クエリが高速 |
+| データ鮮度 | ファクトテーブルへの集計はバッチ処理が多く、リアルタイム性が低い |
+| 書き込みコスト | いいねのたびに `like_count` を更新する必要があり、OLTP には不向き |
+| 向いているケース | BIダッシュボード・定期レポート・機械学習の特徴量テーブルなど分析用途 |
 
 ---
 
