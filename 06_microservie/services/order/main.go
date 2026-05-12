@@ -8,8 +8,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"microservie/order/internal/client"
 	"microservie/order/internal/obs"
 	"microservie/order/internal/repo"
+	"microservie/order/internal/saga"
 	"microservie/order/internal/server"
 	orderv1 "microservie/proto/gen/go/order/v1"
 
@@ -49,10 +51,26 @@ func main() {
 		os.Exit(1)
 	}
 
-	port := os.Getenv("GRPC_PORT")
-	if port == "" {
-		port = "50053"
+	// Dial downstream services.
+	invAddr := getenvDefault("INVENTORY_ADDR", "inventory:50054")
+	payAddr := getenvDefault("PAYMENT_ADDR", "payment:50055")
+
+	inv, err := client.DialInventory(invAddr)
+	if err != nil {
+		slog.Error("dial inventory", "addr", invAddr, "err", err)
+		os.Exit(1)
 	}
+
+	pay, err := client.DialPayment(payAddr)
+	if err != nil {
+		slog.Error("dial payment", "addr", payAddr, "err", err)
+		os.Exit(1)
+	}
+
+	ordRepo := repo.New(pool)
+	sagaCheckout := saga.NewCheckout(inv, pay, ordRepo)
+
+	port := getenvDefault("GRPC_PORT", "50053")
 	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		slog.Error("listen", "err", err)
@@ -60,7 +78,7 @@ func main() {
 	}
 
 	gs := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
-	orderv1.RegisterOrderServiceServer(gs, server.New(repo.New(pool)))
+	orderv1.RegisterOrderServiceServer(gs, server.New(ordRepo, sagaCheckout))
 
 	go func() {
 		<-ctx.Done()
@@ -82,4 +100,11 @@ func applyMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		}
 	}
 	return os.ErrNotExist
+}
+
+func getenvDefault(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
 }

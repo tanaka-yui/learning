@@ -4,12 +4,14 @@ import (
 	"context"
 
 	"microservie/order/internal/repo"
+	"microservie/order/internal/saga"
 	orderv1 "microservie/proto/gen/go/order/v1"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
+// OrderRepo is the full repository interface used by the server.
 type OrderRepo interface {
 	Create(ctx context.Context, userID string, items []repo.OrderItem) (string, int32, error)
 	UpdateStatus(ctx context.Context, orderID, status string) error
@@ -18,24 +20,42 @@ type OrderRepo interface {
 	LogStep(ctx context.Context, orderID, step, status, detail string) error
 }
 
-type Server struct {
-	r OrderRepo
+// SagaRunner abstracts the checkout saga for testing.
+type SagaRunner interface {
+	Run(ctx context.Context, in saga.Input) error
 }
 
-func New(r OrderRepo) *Server { return &Server{r: r} }
+// Server is the gRPC server implementation for the order service.
+type Server struct {
+	r    OrderRepo
+	saga SagaRunner
+}
 
-// PlaceOrder skeleton — Task 5 will add Saga.
-// For now: Create the order row, leave status=PENDING, return that.
+// New creates a new Server with the given repo and saga runner.
+func New(r OrderRepo, sg SagaRunner) *Server { return &Server{r: r, saga: sg} }
+
+// PlaceOrder creates an order and runs the checkout saga.
+// On success the order is CONFIRMED; on saga failure it is FAILED.
 func (s *Server) PlaceOrder(ctx context.Context, req *orderv1.PlaceOrderRequest) (*orderv1.PlaceOrderResponse, error) {
 	items := make([]repo.OrderItem, 0, len(req.Items))
 	for _, it := range req.Items {
 		items = append(items, repo.OrderItem{ProductID: it.ProductId, Quantity: it.Quantity, UnitPriceCents: it.UnitPriceCents})
 	}
-	orderID, _, err := s.r.Create(ctx, req.UserId, items)
+	orderID, total, err := s.r.Create(ctx, req.UserId, items)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &orderv1.PlaceOrderResponse{OrderId: orderID, Status: "PENDING"}, nil
+
+	sagaItems := make([]saga.Item, 0, len(items))
+	for _, it := range items {
+		sagaItems = append(sagaItems, saga.Item{ProductID: it.ProductID, Quantity: it.Quantity})
+	}
+
+	if err := s.saga.Run(ctx, saga.Input{OrderID: orderID, Items: sagaItems, TotalCents: total}); err != nil {
+		// Saga called UpdateStatus("FAILED") internally.
+		return &orderv1.PlaceOrderResponse{OrderId: orderID, Status: "FAILED"}, nil
+	}
+	return &orderv1.PlaceOrderResponse{OrderId: orderID, Status: "CONFIRMED"}, nil
 }
 
 func (s *Server) GetOrder(ctx context.Context, req *orderv1.GetOrderRequest) (*orderv1.GetOrderResponse, error) {
