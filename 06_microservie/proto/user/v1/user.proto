@@ -6,6 +6,7 @@ service UserService {
   rpc SignUp(SignUpRequest) returns (SignUpResponse);
   rpc SignIn(SignInRequest) returns (SignInResponse);
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
 }
 
 message SignUpRequest {
@@ -32,4 +33,13 @@ message ValidateTokenRequest {
 
 message ValidateTokenResponse {
   string user_id = 1;
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  string user_id = 1;
+  string email = 2;
 }

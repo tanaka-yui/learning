@@ -11,6 +11,8 @@ import (
 	userv1 "microservie/proto/gen/go/user/v1"
 
 	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type memRepo struct{ users map[string]repo.User }
@@ -29,6 +31,14 @@ func (m *memRepo) FindByEmail(ctx context.Context, email string) (repo.User, err
 		return repo.User{}, repo.ErrUserNotFound
 	}
 	return u, nil
+}
+func (m *memRepo) FindByID(_ context.Context, id string) (repo.User, error) {
+	for _, u := range m.users {
+		if u.ID == id {
+			return u, nil
+		}
+	}
+	return repo.User{}, repo.ErrUserNotFound
 }
 
 func TestSignUp_thenSignIn_returnsToken(t *testing.T) {
@@ -66,5 +76,26 @@ func TestValidateToken_returnsUserID(t *testing.T) {
 	res, err := s.ValidateToken(context.Background(), &userv1.ValidateTokenRequest{Token: token})
 	if err != nil || res.UserId != "user-42" {
 		t.Fatalf("res=%v err=%v", res, err)
+	}
+}
+
+func TestServerGetUser(t *testing.T) {
+	fake := &memRepo{users: map[string]repo.User{
+		"found@example.com": {ID: "u-1", Email: "found@example.com"},
+	}}
+	j := jwt.New([]byte("test-secret-32-bytes-long-padding"), time.Hour)
+	s := server.New(fake, j)
+
+	resp, err := s.GetUser(context.Background(), &userv1.GetUserRequest{UserId: "u-1"})
+	if err != nil {
+		t.Fatalf("GetUser: %v", err)
+	}
+	if resp.Email != "found@example.com" {
+		t.Errorf("email = %q", resp.Email)
+	}
+
+	_, err = s.GetUser(context.Background(), &userv1.GetUserRequest{UserId: "u-missing"})
+	if status.Code(err) != codes.NotFound {
+		t.Errorf("expected NotFound, got %v", err)
 	}
 }

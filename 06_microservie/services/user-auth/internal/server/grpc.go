@@ -16,6 +16,7 @@ import (
 type UserRepo interface {
 	Create(ctx context.Context, email, hash string) (string, error)
 	FindByEmail(ctx context.Context, email string) (repo.User, error)
+	FindByID(ctx context.Context, id string) (repo.User, error)
 }
 
 type Server struct {
@@ -64,4 +65,15 @@ func (s *Server) ValidateToken(ctx context.Context, req *userv1.ValidateTokenReq
 		return nil, status.Error(codes.Unauthenticated, "invalid token")
 	}
 	return &userv1.ValidateTokenResponse{UserId: uid}, nil
+}
+
+func (s *Server) GetUser(ctx context.Context, req *userv1.GetUserRequest) (*userv1.GetUserResponse, error) {
+	u, err := s.r.FindByID(ctx, req.UserId)
+	if errors.Is(err, repo.ErrUserNotFound) {
+		return nil, status.Error(codes.NotFound, "user not found")
+	}
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &userv1.GetUserResponse{UserId: u.ID, Email: u.Email}, nil
 }

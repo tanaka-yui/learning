@@ -45,3 +45,13 @@ func (r *Repo) FindByEmail(ctx context.Context, email string) (User, error) {
 	}
 	return u, err
 }
+
+func (r *Repo) FindByID(ctx context.Context, id string) (User, error) {
+	var u User
+	err := r.pool.QueryRow(ctx, `SELECT id, email, password_hash FROM users WHERE id=$1`, id).
+		Scan(&u.ID, &u.Email, &u.PasswordHash)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return User{}, ErrUserNotFound
+	}
+	return u, err
+}

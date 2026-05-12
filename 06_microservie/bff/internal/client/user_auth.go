@@ -46,3 +46,16 @@ func (u *UserAuth) ValidateToken(ctx context.Context, token string) (string, err
 	}
 	return r.UserId, nil
 }
+
+type UserProfile struct {
+	UserID string
+	Email  string
+}
+
+func (u *UserAuth) GetUser(ctx context.Context, userID string) (*UserProfile, error) {
+	r, err := u.c.GetUser(ctx, &userv1.GetUserRequest{UserId: userID})
+	if err != nil {
+		return nil, err
+	}
+	return &UserProfile{UserID: r.UserId, Email: r.Email}, nil
+}

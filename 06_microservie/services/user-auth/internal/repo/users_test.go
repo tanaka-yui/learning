@@ -2,6 +2,7 @@ package repo_test
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -71,5 +72,29 @@ func TestFindByEmail_notFound(t *testing.T) {
 	_, err := r.FindByEmail(context.Background(), "missing@example.com")
 	if err != repo.ErrUserNotFound {
 		t.Fatalf("want ErrUserNotFound, got %v", err)
+	}
+}
+
+func TestRepoFindByID(t *testing.T) {
+	ctx := context.Background()
+	pool := setupDB(t)
+	r := repo.New(pool)
+
+	id, err := r.Create(ctx, "find-by-id@example.com", "hash")
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	u, err := r.FindByID(ctx, id)
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if u.Email != "find-by-id@example.com" {
+		t.Errorf("email = %q, want find-by-id@example.com", u.Email)
+	}
+
+	_, err = r.FindByID(ctx, "00000000-0000-0000-0000-000000000000")
+	if !errors.Is(err, repo.ErrUserNotFound) {
+		t.Errorf("expected ErrUserNotFound, got %v", err)
 	}
 }
