@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react';
 
 export interface CartItem {
   productId: string;
@@ -50,10 +50,27 @@ export function writeCart(items: CartItem[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
-export function useCart() {
+interface CartContextValue {
+  items: CartItem[];
+  add: (productId: string, quantity?: number) => void;
+  setQuantity: (productId: string, quantity: number) => void;
+  remove: (productId: string) => void;
+  clear: () => void;
+}
+
+const CartContext = createContext<CartContextValue | null>(null);
+
+export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => readCart());
+  const hydrated = useRef(false);
 
   useEffect(() => {
+    // Skip the very first effect run: state was just hydrated from localStorage,
+    // re-writing immediately is wasted work and can clobber storage if interrupted.
+    if (!hydrated.current) {
+      hydrated.current = true;
+      return;
+    }
     writeCart(items);
   }, [items]);
 
@@ -71,5 +88,15 @@ export function useCart() {
 
   const clear = useCallback(() => setItems([]), []);
 
-  return { items, add, setQuantity, remove, clear };
+  return (
+    <CartContext.Provider value={{ items, add, setQuantity, remove, clear }}>
+      {children}
+    </CartContext.Provider>
+  );
+}
+
+export function useCart(): CartContextValue {
+  const ctx = useContext(CartContext);
+  if (!ctx) throw new Error('useCart must be used inside CartProvider');
+  return ctx;
 }
