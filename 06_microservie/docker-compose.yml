@@ -1,0 +1,62 @@
+services:
+  postgres-catalog:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: catalog
+      POSTGRES_PASSWORD: catalog
+      POSTGRES_DB: catalog
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catalog -d catalog"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  catalog:
+    build:
+      context: .
+      dockerfile: services/catalog/Dockerfile
+    environment:
+      DATABASE_URL: postgres://catalog:catalog@postgres-catalog:5432/catalog?sslmode=disable
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
+      GRPC_PORT: "50051"
+    depends_on:
+      postgres-catalog:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    ports:
+      - "50051:50051"
+
+  bff:
+    build:
+      context: .
+      dockerfile: bff/Dockerfile
+    environment:
+      CATALOG_ADDR: catalog:50051
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
+      HTTP_PORT: "8080"
+    depends_on:
+      - catalog
+    ports:
+      - "8080:8080"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.110.0
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./infra/otel-collector/config.yaml:/etc/otel/config.yaml:ro
+    depends_on:
+      - jaeger
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.76.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "4327:4317"
