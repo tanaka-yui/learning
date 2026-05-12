@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"microservie/bff/internal/httpx"
 	"microservie/bff/internal/middleware"
 )
@@ -63,7 +66,11 @@ func (a *Auth) Me(w http.ResponseWriter, r *http.Request) {
 	}
 	email, err := a.c.GetUser(r.Context(), uid)
 	if err != nil {
-		httpx.WriteError(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "user not found")
+		if status.Code(err) == codes.NotFound {
+			httpx.WriteError(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "user not found")
+			return
+		}
+		httpx.WriteError(w, r, http.StatusBadGateway, "UPSTREAM_FAILED", err.Error())
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

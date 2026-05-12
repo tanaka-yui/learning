@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"microservie/bff/internal/httpx"
 	catalogv1 "microservie/proto/gen/go/catalog/v1"
@@ -59,7 +61,11 @@ func (p *Products) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	prod, err := p.c.GetProduct(r.Context(), id)
 	if err != nil {
-		httpx.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", err.Error())
+		if status.Code(err) == codes.NotFound {
+			httpx.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", err.Error())
+			return
+		}
+		httpx.WriteError(w, r, http.StatusBadGateway, "UPSTREAM_FAILED", err.Error())
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

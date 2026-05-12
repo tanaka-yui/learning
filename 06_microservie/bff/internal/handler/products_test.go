@@ -3,12 +3,14 @@ package handler_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"microservie/bff/internal/handler"
 	catalogv1 "microservie/proto/gen/go/catalog/v1"
@@ -28,7 +30,7 @@ func (f *fakeClient) GetProduct(_ context.Context, id string) (*catalogv1.Produc
 			return p, nil
 		}
 	}
-	return nil, fmt.Errorf("not found")
+	return nil, status.Error(codes.NotFound, "not found")
 }
 
 func TestListProducts_returnsJSON(t *testing.T) {
@@ -108,4 +110,35 @@ func TestProductsGet_NotFound(t *testing.T) {
 	if body["code"] != "NOT_FOUND" {
 		t.Errorf("code = %v", body["code"])
 	}
+}
+
+func TestProductsGet_UpstreamFailureReturns502(t *testing.T) {
+	fake := &fakeClientErr{err: errors.New("dial tcp: connection refused")}
+	h := handler.NewProducts(fake)
+
+	rt := chi.NewRouter()
+	rt.Get("/api/products/{id}", h.Get)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/products/p-001", nil)
+	w := httptest.NewRecorder()
+	rt.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadGateway {
+		t.Errorf("status = %d, want 502", w.Code)
+	}
+	var body map[string]any
+	_ = json.Unmarshal(w.Body.Bytes(), &body)
+	if body["code"] != "UPSTREAM_FAILED" {
+		t.Errorf("code = %v, want UPSTREAM_FAILED", body["code"])
+	}
+}
+
+type fakeClientErr struct{ err error }
+
+func (f *fakeClientErr) ListProducts(_ context.Context) ([]*catalogv1.Product, error) {
+	return nil, f.err
+}
+
+func (f *fakeClientErr) GetProduct(_ context.Context, _ string) (*catalogv1.Product, error) {
+	return nil, f.err
 }
