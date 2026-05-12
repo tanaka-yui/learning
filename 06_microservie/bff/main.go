@@ -19,6 +19,16 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
+type uaAdapter struct{ *client.UserAuth }
+
+func (a uaAdapter) GetUser(ctx context.Context, userID string) (string, error) {
+	p, err := a.UserAuth.GetUser(ctx, userID)
+	if err != nil {
+		return "", err
+	}
+	return p.Email, nil
+}
+
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger.With("service", "bff"))
@@ -64,7 +74,7 @@ func main() {
 	}
 
 	products := handler.NewProducts(cat)
-	authHandler := handler.NewAuth(ua)
+	authHandler := handler.NewAuth(uaAdapter{ua})
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -72,14 +82,17 @@ func main() {
 	r.Use(corsMiddleware)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	r.Get("/api/products", products.List)
+	r.Get("/api/products/{id}", products.Get)
 	r.Post("/api/auth/signup", authHandler.SignUp)
 	r.Post("/api/auth/signin", authHandler.SignIn)
+	r.Post("/api/auth/signout", authHandler.SignOut)
 
 	// Protected routes
 	r.Group(func(p chi.Router) {
 		p.Use(bffmiddleware.Auth(ua))
 		checkoutHandler := handler.NewCheckout(cat, ord)
 		ordersHandler := handler.NewOrders(ord)
+		p.Get("/api/auth/me", authHandler.Me)
 		p.Post("/api/checkout", checkoutHandler.Post)
 		p.Get("/api/orders", ordersHandler.List)
 		p.Get("/api/orders/{id}", ordersHandler.Get)

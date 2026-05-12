@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+
 	"microservie/bff/internal/httpx"
 	catalogv1 "microservie/proto/gen/go/catalog/v1"
 )
 
 type CatalogClient interface {
 	ListProducts(ctx context.Context) ([]*catalogv1.Product, error)
+	GetProduct(ctx context.Context, id string) (*catalogv1.Product, error)
 }
 
 type Products struct {
@@ -46,4 +49,21 @@ func (p *Products) List(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(out)
+}
+
+func (p *Products) Get(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		httpx.WriteError(w, r, http.StatusBadRequest, "INVALID_INPUT", "id required")
+		return
+	}
+	prod, err := p.c.GetProduct(r.Context(), id)
+	if err != nil {
+		httpx.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(productDTO{
+		ID: prod.Id, Name: prod.Name, Description: prod.Description, PriceCents: prod.PriceCents,
+	})
 }
