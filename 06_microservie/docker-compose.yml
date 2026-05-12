@@ -1,47 +1,148 @@
 services:
+  # === Postgres インスタンス（DB-per-service の見える化） ===
   postgres-catalog:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: catalog
       POSTGRES_PASSWORD: catalog
       POSTGRES_DB: catalog
-    ports:
-      - "55432:5432"
+    ports: ["55432:5432"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U catalog -d catalog"]
       interval: 2s
       timeout: 2s
       retries: 20
 
+  postgres-inventory:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: inventory
+      POSTGRES_PASSWORD: inventory
+      POSTGRES_DB: inventory
+    ports: ["55433:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory -d inventory"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  postgres-user-auth:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: userauth
+      POSTGRES_PASSWORD: userauth
+      POSTGRES_DB: userauth
+    ports: ["55434:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U userauth -d userauth"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  postgres-payment:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: payment
+      POSTGRES_PASSWORD: payment
+      POSTGRES_DB: payment
+    ports: ["55435:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payment -d payment"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  postgres-order:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: orders
+      POSTGRES_PASSWORD: orders
+      POSTGRES_DB: orders
+    ports: ["55436:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orders -d orders"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  # === バックエンドサービス ===
   catalog:
-    build:
-      context: .
-      dockerfile: services/catalog/Dockerfile
+    build: { context: ., dockerfile: services/catalog/Dockerfile }
     environment:
       DATABASE_URL: postgres://catalog:catalog@postgres-catalog:5432/catalog?sslmode=disable
       OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
       GRPC_PORT: "50051"
     depends_on:
-      postgres-catalog:
-        condition: service_healthy
-      otel-collector:
-        condition: service_started
-    ports:
-      - "50051:50051"
+      postgres-catalog: { condition: service_healthy }
+      otel-collector:   { condition: service_started }
+    ports: ["50051:50051"]
+
+  inventory:
+    build: { context: ., dockerfile: services/inventory/Dockerfile }
+    environment:
+      DATABASE_URL: postgres://inventory:inventory@postgres-inventory:5432/inventory?sslmode=disable
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
+      GRPC_PORT: "50054"
+    depends_on:
+      postgres-inventory: { condition: service_healthy }
+      otel-collector:     { condition: service_started }
+    ports: ["50054:50054"]
+
+  user-auth:
+    build: { context: ., dockerfile: services/user-auth/Dockerfile }
+    environment:
+      DATABASE_URL: postgres://userauth:userauth@postgres-user-auth:5432/userauth?sslmode=disable
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
+      JWT_SECRET: test-secret-32-bytes-long-padding-pad
+      GRPC_PORT: "50052"
+    depends_on:
+      postgres-user-auth: { condition: service_healthy }
+      otel-collector:     { condition: service_started }
+    ports: ["50052:50052"]
+
+  payment:
+    build: { context: ., dockerfile: services/payment/Dockerfile }
+    environment:
+      DATABASE_URL: postgres://payment:payment@postgres-payment:5432/payment?sslmode=disable
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
+      FLAKE_RATE: "${FLAKE_RATE:-0.0}"
+      GRPC_PORT: "50055"
+    depends_on:
+      postgres-payment: { condition: service_healthy }
+      otel-collector:   { condition: service_started }
+    ports: ["50055:50055"]
+
+  order:
+    build: { context: ., dockerfile: services/order/Dockerfile }
+    environment:
+      DATABASE_URL: postgres://orders:orders@postgres-order:5432/orders?sslmode=disable
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
+      INVENTORY_ADDR: inventory:50054
+      PAYMENT_ADDR: payment:50055
+      CATALOG_ADDR: catalog:50051
+      GRPC_PORT: "50053"
+    depends_on:
+      postgres-order: { condition: service_healthy }
+      inventory:      { condition: service_started }
+      payment:        { condition: service_started }
+      otel-collector: { condition: service_started }
+    ports: ["50053:50053"]
 
   bff:
-    build:
-      context: .
-      dockerfile: bff/Dockerfile
+    build: { context: ., dockerfile: bff/Dockerfile }
     environment:
       CATALOG_ADDR: catalog:50051
+      USER_AUTH_ADDR: user-auth:50052
+      ORDER_ADDR: order:50053
       OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
       HTTP_PORT: "8080"
     depends_on:
       - catalog
-    ports:
-      - "8080:8080"
+      - user-auth
+      - order
+    ports: ["8080:8080"]
 
+  # === 観測性スタック ===
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.110.0
     command: ["--config=/etc/otel/config.yaml"]
@@ -49,14 +150,10 @@ services:
       - ./infra/otel-collector/config.yaml:/etc/otel/config.yaml:ro
     depends_on:
       - jaeger
-    ports:
-      - "4317:4317"
-      - "4318:4318"
+    ports: ["4317:4317", "4318:4318"]
 
   jaeger:
     image: jaegertracing/all-in-one:1.76.0
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
-    ports:
-      - "16686:16686"
-      - "4327:4317"
+    ports: ["16686:16686", "4327:4317"]
