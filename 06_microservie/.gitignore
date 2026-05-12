@@ -1,0 +1,10 @@
+# build artifacts
+/services/*/bin/
+/bff/bin/
+
+# generated code
+/proto/gen/
+
+# env
+.env
+.env.local
