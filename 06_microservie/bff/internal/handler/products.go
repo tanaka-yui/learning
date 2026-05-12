@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"microservie/bff/internal/httpx"
 	catalogv1 "microservie/proto/gen/go/catalog/v1"
 )
 
@@ -34,7 +35,7 @@ type listResponse struct {
 func (p *Products) List(w http.ResponseWriter, r *http.Request) {
 	ps, err := p.c.ListProducts(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
+		httpx.WriteError(w, r, http.StatusBadGateway, "UPSTREAM_FAILED", err.Error())
 		return
 	}
 	out := listResponse{Products: make([]productDTO, 0, len(ps))}

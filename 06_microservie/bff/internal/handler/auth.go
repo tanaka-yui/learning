@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+
+	"microservie/bff/internal/httpx"
 )
 
 type AuthClient interface {
@@ -18,12 +20,12 @@ func NewAuth(c AuthClient) *Auth { return &Auth{c: c} }
 func (a *Auth) SignUp(w http.ResponseWriter, r *http.Request) {
 	var req struct{ Email, Password string }
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), 400)
+		httpx.WriteError(w, r, http.StatusBadRequest, "INVALID_INPUT", err.Error())
 		return
 	}
 	uid, err := a.c.SignUp(r.Context(), req.Email, req.Password)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
+		httpx.WriteError(w, r, http.StatusBadRequest, "INVALID_INPUT", err.Error())
 		return
 	}
 	_ = json.NewEncoder(w).Encode(map[string]string{"user_id": uid})
@@ -32,12 +34,12 @@ func (a *Auth) SignUp(w http.ResponseWriter, r *http.Request) {
 func (a *Auth) SignIn(w http.ResponseWriter, r *http.Request) {
 	var req struct{ Email, Password string }
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), 400)
+		httpx.WriteError(w, r, http.StatusBadRequest, "INVALID_INPUT", err.Error())
 		return
 	}
 	token, err := a.c.SignIn(r.Context(), req.Email, req.Password)
 	if err != nil {
-		http.Error(w, "invalid credentials", 401)
+		httpx.WriteError(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "invalid credentials")
 		return
 	}
 	http.SetCookie(w, &http.Cookie{

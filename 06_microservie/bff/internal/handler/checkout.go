@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"microservie/bff/internal/httpx"
 	"microservie/bff/internal/middleware"
 	catalogv1 "microservie/proto/gen/go/catalog/v1"
 	orderv1 "microservie/proto/gen/go/order/v1"
@@ -44,17 +45,17 @@ type checkoutResp struct {
 func (h *Checkout) Post(w http.ResponseWriter, r *http.Request) {
 	uid := middleware.UserID(r.Context())
 	if uid == "" {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		httpx.WriteError(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "unauthorized")
 		return
 	}
 
 	var req checkoutReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httpx.WriteError(w, r, http.StatusBadRequest, "INVALID_INPUT", err.Error())
 		return
 	}
 	if len(req.Items) == 0 {
-		http.Error(w, "items required", http.StatusBadRequest)
+		httpx.WriteError(w, r, http.StatusBadRequest, "INVALID_INPUT", "items required")
 		return
 	}
 
@@ -62,7 +63,7 @@ func (h *Checkout) Post(w http.ResponseWriter, r *http.Request) {
 	for _, it := range req.Items {
 		p, err := h.cat.GetProduct(r.Context(), it.ProductID)
 		if err != nil {
-			http.Error(w, "product lookup failed: "+err.Error(), http.StatusBadGateway)
+			httpx.WriteError(w, r, http.StatusBadGateway, "UPSTREAM_FAILED", "product lookup failed: "+err.Error())
 			return
 		}
 		items = append(items, &orderv1.PlaceOrderItem{
@@ -72,7 +73,7 @@ func (h *Checkout) Post(w http.ResponseWriter, r *http.Request) {
 
 	res, err := h.ord.PlaceOrder(r.Context(), uid, items)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
+		httpx.WriteError(w, r, http.StatusBadGateway, "UPSTREAM_FAILED", err.Error())
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

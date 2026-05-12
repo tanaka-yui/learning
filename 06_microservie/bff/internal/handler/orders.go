@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"microservie/bff/internal/httpx"
 	"microservie/bff/internal/middleware"
 	orderv1 "microservie/proto/gen/go/order/v1"
 )
@@ -47,7 +48,7 @@ func (h *Orders) List(w http.ResponseWriter, r *http.Request) {
 	uid := middleware.UserID(r.Context())
 	os, err := h.c.ListOrders(r.Context(), uid)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
+		httpx.WriteError(w, r, http.StatusBadGateway, "UPSTREAM_FAILED", err.Error())
 		return
 	}
 	out := make([]orderDTO, 0, len(os))
@@ -63,7 +64,7 @@ func (h *Orders) Get(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
 	o, err := h.c.GetOrder(r.Context(), orderID, uid)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		httpx.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", err.Error())
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

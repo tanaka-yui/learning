@@ -91,7 +91,7 @@ func main() {
 	}
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           otelhttp.NewHandler(r, "bff"),
+		Handler:           otelhttp.NewHandler(bffmiddleware.TraceID(r), "bff"),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

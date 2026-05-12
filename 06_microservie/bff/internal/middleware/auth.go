@@ -3,6 +3,8 @@ package middleware
 import (
 	"context"
 	"net/http"
+
+	"microservie/bff/internal/httpx"
 )
 
 type ctxKey string
@@ -18,12 +20,12 @@ func Auth(v Validator) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			c, err := r.Cookie("session")
 			if err != nil {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				httpx.WriteError(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "unauthorized")
 				return
 			}
 			uid, err := v.ValidateToken(r.Context(), c.Value)
 			if err != nil {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				httpx.WriteError(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "unauthorized")
 				return
 			}
 			ctx := context.WithValue(r.Context(), userIDKey, uid)
