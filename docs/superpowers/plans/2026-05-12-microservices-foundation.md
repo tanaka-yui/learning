@@ -143,14 +143,15 @@ make logs    # ログ
 Create `06_microservie/go.work`:
 
 ```
-go 1.26
+go 1.25
 
 use (
     ./proto
     ./services/catalog
-    ./bff
 )
 ```
+
+> 注: `./bff` は Task 8 で bff モジュールを作成した後に追加する（参照先が存在しない `use` エントリは Go ツールチェインがエラー扱いするため）。
 
 - [ ] **Step 5: コミット**
 
@@ -213,7 +214,7 @@ Create `06_microservie/proto/go.mod`:
 ```
 module microservie/proto
 
-go 1.26
+go 1.25
 
 require (
     google.golang.org/grpc v1.66.0
@@ -313,7 +314,7 @@ Create `06_microservie/services/catalog/go.mod`:
 ```
 module microservie/catalog
 
-go 1.26
+go 1.25
 
 require (
     microservie/proto v0.0.0
@@ -1190,7 +1191,7 @@ Create `06_microservie/bff/go.mod`:
 ```
 module microservie/bff
 
-go 1.26
+go 1.25
 
 require (
     microservie/proto v0.0.0
@@ -1199,6 +1200,20 @@ require (
 )
 
 replace microservie/proto => ../proto
+```
+
+- [ ] **Step 1.5: `go.work` に `./bff` を追加**
+
+Edit `06_microservie/go.work` to include the new bff module:
+
+```
+go 1.25
+
+use (
+    ./proto
+    ./services/catalog
+    ./bff
+)
 ```
 
 - [ ] **Step 2: 失敗するハンドラテストを書く**
