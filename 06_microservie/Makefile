@@ -4,10 +4,10 @@
 # Docker Desktop の場合は無視されても無害。
 TEST_ENV := DOCKER_HOST=unix://$(HOME)/.rd/docker.sock TESTCONTAINERS_RYUK_DISABLED=true
 
-.PHONY: help up down logs proto seed seed/catalog seed/inventory seed/user-auth test clean up/flaky-20 up/flaky-60 demo/happy demo/retry demo/circuit
+.PHONY: help up down logs proto seed seed/catalog seed/inventory seed/user-auth test test/frontend clean up/flaky-20 up/flaky-60 demo/happy demo/retry demo/circuit frontend/install frontend/dev
 
 help: ## ヘルプを表示
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-12s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_/-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
 up: ## 全サービス起動
 	docker compose up -d --build
@@ -32,13 +32,22 @@ seed/inventory:
 seed/user-auth:
 	docker compose exec -T postgres-user-auth psql -U userauth -d userauth -f - < services/user-auth/seed/seed.sql
 
-test: ## 各 Go モジュールのユニット/インテグレーションテスト
+test: test/frontend ## 各 Go モジュールのユニット/インテグレーションテスト + frontend Vitest
 	$(TEST_ENV) sh -c 'cd services/catalog && go test ./...'
 	$(TEST_ENV) sh -c 'cd services/inventory && go test ./...'
 	$(TEST_ENV) sh -c 'cd services/user-auth && go test ./...'
 	$(TEST_ENV) sh -c 'cd services/payment && go test ./...'
 	$(TEST_ENV) sh -c 'cd services/order && go test ./...'
 	cd bff && go test ./...
+
+test/frontend: ## frontend の Vitest を走らせる
+	cd frontend && npm test -- --run
+
+frontend/install: ## frontend の依存をローカル npm install
+	cd frontend && npm install
+
+frontend/dev: ## frontend をローカルで vite dev 起動（docker を使わない場合）
+	cd frontend && npm run dev
 
 clean: ## ボリュームも含めて削除
 	docker compose down -v

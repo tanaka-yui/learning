@@ -142,6 +142,19 @@ services:
       - order
     ports: ["8080:8080"]
 
+  frontend:
+    build: { context: ./frontend, dockerfile: Dockerfile.dev }
+    environment:
+      VITE_API_BASE: http://localhost:8080
+      VITE_JAEGER_URL: http://localhost:16686
+    ports: ["5173:5173"]
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - bff
+    command: npm run dev -- --host 0.0.0.0
+
   # === 観測性スタック ===
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.110.0

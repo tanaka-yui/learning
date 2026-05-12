@@ -333,6 +333,7 @@ services:
 |---|---|
 | `make up` で全コンテナが healthy になる | `docker compose ps` がすべて `healthy` |
 | React UI から商品閲覧 → ログイン → 注文ができる | ブラウザで手動 |
+| frontend が `:5173` で動き、注文確定後に trace_id を Jaeger で開ける | ブラウザで手動。完了画面の trace チップから Jaeger に飛ぶ |
 | Jaeger UI に checkout の trace が現れる | `:16686` で確認 |
 | `make demo:retry` で `FLAKE_RATE=0.2` 時にリトライが発火しつつ多くが成功する | スクリプトの集計出力 |
 | `make demo:circuit` で `FLAKE_RATE=0.6` 時に Circuit Breaker が Open に遷移 | order サービスのログに `[CB] state=open` |
