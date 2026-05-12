@@ -5,12 +5,16 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 
+	"microservie/catalog/internal/obs"
 	"microservie/catalog/internal/repo"
 	"microservie/catalog/internal/server"
 	catalogv1 "microservie/proto/gen/go/catalog/v1"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
 
@@ -18,13 +22,22 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger.With("service", "catalog"))
 
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	shutdownTracer, err := obs.InitTracing(ctx, "catalog")
+	if err != nil {
+		slog.Error("init tracing", "err", err)
+		os.Exit(1)
+	}
+	defer func() { _ = shutdownTracer(context.Background()) }()
+
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		slog.Error("DATABASE_URL is required")
 		os.Exit(1)
 	}
 
-	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
 		slog.Error("pgxpool.New", "err", err)
@@ -47,8 +60,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	gs := grpc.NewServer()
+	gs := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+	)
 	catalogv1.RegisterCatalogServiceServer(gs, server.New(repo.New(pool)))
+
+	go func() {
+		<-ctx.Done()
+		gs.GracefulStop()
+	}()
 
 	slog.Info("catalog gRPC server starting", "port", port)
 	if err := gs.Serve(lis); err != nil {
@@ -58,12 +78,19 @@ func main() {
 }
 
 func applyMigrations(ctx context.Context, pool *pgxpool.Pool) error {
-	b, err := os.ReadFile("/app/migrations/001_create_products.sql")
-	if err != nil {
-		b, err = os.ReadFile("migrations/001_create_products.sql")
-		if err != nil {
-			return err
+	candidates := []string{"/app/migrations/001_create_products.sql", "migrations/001_create_products.sql"}
+	var (
+		b   []byte
+		err error
+	)
+	for _, p := range candidates {
+		b, err = os.ReadFile(p)
+		if err == nil {
+			break
 		}
+	}
+	if err != nil {
+		return err
 	}
 	_, err = pool.Exec(ctx, string(b))
 	return err
