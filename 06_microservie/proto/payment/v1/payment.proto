@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package payment.v1;
+
+service PaymentService {
+  rpc Charge(ChargeRequest) returns (ChargeResponse);
+  rpc Refund(RefundRequest) returns (RefundResponse);
+}
+
+message ChargeRequest {
+  string idempotency_key = 1;
+  string order_id = 2;
+  int32 amount_cents = 3;
+}
+
+message ChargeResponse {
+  string payment_id = 1;
+  string status = 2; // "succeeded"
+}
+
+message RefundRequest {
+  string payment_id = 1;
+}
+
+message RefundResponse {
+  string status = 1; // "refunded"
+}

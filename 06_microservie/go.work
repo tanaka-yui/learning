@@ -5,5 +5,6 @@ use (
     ./services/catalog
     ./services/inventory
     ./services/user-auth
+    ./services/payment
     ./bff
 )
