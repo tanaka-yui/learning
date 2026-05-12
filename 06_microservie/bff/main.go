@@ -11,6 +11,7 @@ import (
 
 	"microservie/bff/internal/client"
 	"microservie/bff/internal/handler"
+	bffmiddleware "microservie/bff/internal/middleware"
 	"microservie/bff/internal/obs"
 
 	"github.com/go-chi/chi/v5"
@@ -42,7 +43,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	uaAddr := os.Getenv("USER_AUTH_ADDR")
+	if uaAddr == "" {
+		uaAddr = "user-auth:50052"
+	}
+	ua, err := client.DialUserAuth(uaAddr)
+	if err != nil {
+		slog.Error("dial user-auth", "err", err)
+		os.Exit(1)
+	}
+
 	products := handler.NewProducts(cat)
+	authHandler := handler.NewAuth(ua)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -50,6 +62,13 @@ func main() {
 	r.Use(corsMiddleware)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	r.Get("/api/products", products.List)
+	r.Post("/api/auth/signup", authHandler.SignUp)
+	r.Post("/api/auth/signin", authHandler.SignIn)
+
+	// Protected routes (Task 8 will add /api/checkout, /api/orders here)
+	r.Group(func(p chi.Router) {
+		p.Use(bffmiddleware.Auth(ua))
+	})
 
 	port := os.Getenv("HTTP_PORT")
 	if port == "" {
