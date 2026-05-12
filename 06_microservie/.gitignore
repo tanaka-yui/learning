@@ -1,6 +1,7 @@
 # build artifacts
 /services/*/bin/
 /bff/bin/
+/bff/bff
 
 # generated code
 /proto/gen/

@@ -34,6 +34,7 @@ func (a *Auth) SignUp(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, http.StatusBadRequest, "INVALID_INPUT", err.Error())
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{"user_id": uid})
 }
 
