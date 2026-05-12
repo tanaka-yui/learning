@@ -53,6 +53,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	orderAddr := os.Getenv("ORDER_ADDR")
+	if orderAddr == "" {
+		orderAddr = "order:50053"
+	}
+	ord, err := client.DialOrder(orderAddr)
+	if err != nil {
+		slog.Error("dial order", "err", err)
+		os.Exit(1)
+	}
+
 	products := handler.NewProducts(cat)
 	authHandler := handler.NewAuth(ua)
 
@@ -65,9 +75,14 @@ func main() {
 	r.Post("/api/auth/signup", authHandler.SignUp)
 	r.Post("/api/auth/signin", authHandler.SignIn)
 
-	// Protected routes (Task 8 will add /api/checkout, /api/orders here)
+	// Protected routes
 	r.Group(func(p chi.Router) {
 		p.Use(bffmiddleware.Auth(ua))
+		checkoutHandler := handler.NewCheckout(cat, ord)
+		ordersHandler := handler.NewOrders(ord)
+		p.Post("/api/checkout", checkoutHandler.Post)
+		p.Get("/api/orders", ordersHandler.List)
+		p.Get("/api/orders/{id}", ordersHandler.Get)
 	})
 
 	port := os.Getenv("HTTP_PORT")

@@ -36,3 +36,9 @@ func UserID(ctx context.Context) string {
 	v, _ := ctx.Value(userIDKey).(string)
 	return v
 }
+
+// SetUserID returns a context with the given user ID set.
+// Intended for use in tests.
+func SetUserID(ctx context.Context, uid string) context.Context {
+	return context.WithValue(ctx, userIDKey, uid)
+}

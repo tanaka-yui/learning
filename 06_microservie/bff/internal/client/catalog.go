@@ -32,3 +32,11 @@ func (c *Catalog) ListProducts(ctx context.Context) ([]*catalogv1.Product, error
 	}
 	return res.Products, nil
 }
+
+func (c *Catalog) GetProduct(ctx context.Context, id string) (*catalogv1.Product, error) {
+	res, err := c.c.GetProduct(ctx, &catalogv1.GetProductRequest{Id: id})
+	if err != nil {
+		return nil, err
+	}
+	return res.Product, nil
+}
