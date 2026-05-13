@@ -105,19 +105,21 @@ done
 
 | 概念 | ファイル | シンボル |
 |---|---|---|
-| Saga オーケストレーション | `services/order/internal/saga/checkout.go` | `Run`, `Step` 構造体 |
+| Saga オーケストレーション | `services/order/internal/saga/checkout.go` | `Run`、各ステップは関数内コメント Step 1/2/3 |
+| Saga ステップログ | `services/order/internal/saga/checkout.go` | `OrderStore.LogStep` |
 | Inventory Reserve | `services/inventory/internal/server/grpc.go` | `Reserve` |
 | Inventory Commit | 同上 | `Commit` |
 | Inventory Release | 同上 | `Release` |
 | Payment 擬似失敗 | `services/payment/internal/flake/flake.go` | `ShouldFail` |
-| Circuit Breaker | `services/order/internal/saga/checkout.go` | `gobreaker.CircuitBreaker` の初期化 |
-| Retry + 指数バックオフ | 同上 | `backoff.Retry` 呼び出し |
+| Circuit Breaker 初期化 | `services/order/internal/resilience/breaker.go` | `NewBreaker` |
+| Circuit Breaker 利用 | `services/order/internal/client/payment.go` | `gobreaker.CircuitBreaker` を `Charge` 呼び出しに巻く箇所 |
+| Retry + 指数バックオフ | `services/order/internal/client/inventory.go` | `backoff.Retry` 呼び出し |
 | BFF Checkout 集約 | `bff/internal/handler/checkout.go` | `Checkout.Post` |
 | BFF Auth middleware | `bff/internal/middleware/auth.go` | `Auth` |
-| JWT 発行・検証 | `services/user-auth/internal/jwt/manager.go` | `Issue`, `Verify` |
+| JWT 発行・検証 | `services/user-auth/internal/jwt/jwt.go` | `Issue`, `Verify` |
 | trace_id レスポンス header | `bff/internal/middleware/traceid.go` | `TraceID` |
 | エラー JSON 統一 | `bff/internal/httpx/error.go` | `WriteError` |
-| OTel SDK 初期化 | `bff/internal/obs/tracing.go` | `InitTracing` |
+| OTel SDK 初期化 | `bff/internal/obs/otel.go` | `InitTracing` |
 | GetUser RPC | `services/user-auth/internal/server/grpc.go` | `GetUser` |
 | Auth.Me ハンドラ | `bff/internal/handler/auth.go` | `Auth.Me` |
 | Frontend trace_id 表示 | `frontend/src/components/TraceIdChip.tsx` | `TraceIdChip` |
