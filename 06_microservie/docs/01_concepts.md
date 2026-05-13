@@ -106,7 +106,7 @@ flowchart TB
 
 注文確定フローを例にとると、`bff/internal/handler/checkout.go::Checkout.Post` が REST を受け取り、order サービスを呼ぶ。order は `services/order/internal/saga/checkout.go::Run` の中で `services/inventory/internal/server/grpc.go::Reserve` を gRPC で呼ぶ。**`order` が `inventory` の Postgres を直接見ない** — この一点が、モジュラーモノリスではなくマイクロサービスにしている境界である。
 
-認証も同じ構造で、`services/user-auth/internal/jwt/manager.go::Issue` と `Verify` で JWT を発行・検証し、BFF は `bff/internal/middleware/auth.go::Auth` で入口を守る。
+認証も同じ構造で、`services/user-auth/internal/jwt/jwt.go::Issue` と `Verify` で JWT を発行・検証し、BFF は `bff/internal/middleware/auth.go::Auth` で入口を守る。
 
 ## 4. 落とし穴 / よくある誤解
 

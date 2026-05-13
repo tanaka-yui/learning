@@ -67,7 +67,7 @@ SDK と Collector を分ける理由は、アプリから「どこに送るか�
 
 ### 3.1 SDK の初期化
 
-各 Go プロセスは起動時に OTel SDK を立ち上げる。BFF の例: `bff/internal/obs/tracing.go::InitTracing`。やることは 3 つだけ — OTLP/gRPC で Collector を指す exporter を作り、サービス名を載せた `TracerProvider` をグローバル登録し、`propagation.TraceContext{}` をグローバル propagator にする（= traceparent ヘッダを読み書きする方言を選ぶ）。
+各 Go プロセスは起動時に OTel SDK を立ち上げる。BFF の例: `bff/internal/obs/otel.go::InitTracing`。やることは 3 つだけ — OTLP/gRPC で Collector を指す exporter を作り、サービス名を載せた `TracerProvider` をグローバル登録し、`propagation.TraceContext{}` をグローバル propagator にする（= traceparent ヘッダを読み書きする方言を選ぶ）。
 
 order / inventory / payment / user-auth にも同形のコードが置かれている。これは親仕様 §4.7 の **意図的な重複** だ。共通ライブラリ化すれば DRY だが、教材では「初期化が各サービスに収まっていて読みやすい」を優先した。実プロダクトでは社内 SDK にまとめるのが普通、と明示することで誤解を防いでいる。
 

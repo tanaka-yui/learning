@@ -103,7 +103,7 @@ Envoy はメッシュの「働き手」で、アプリと相乗りする形で�
 |---|---|---|
 | サービス間 mTLS | なし（平文 gRPC） | サイドカー間で自動。アプリは平文のまま |
 | order → payment のリトライ | アプリ側の `backoff.Retry` | サイドカーの `VirtualService` 設定 |
-| order → payment のサーキットブレーカー | `services/order/internal/saga/checkout.go::gobreaker.CircuitBreaker の初期化` | サイドカーの `DestinationRule` 設定 |
+| order → payment のサーキットブレーカー | `services/order/internal/resilience/breaker.go::NewBreaker` と利用箇所 `services/order/internal/client/payment.go` | サイドカーの `DestinationRule` 設定 |
 | trace_id 伝搬 | `bff/internal/middleware/traceid.go::TraceID` でレスポンスに付加 | サイドカーが `traceparent` を自動付加。レスポンスへの露出はアプリの仕事として残る |
 | メトリクス取得 | 各サービスに OTel SDK | サイドカーが全リクエストを自動計測 |
 

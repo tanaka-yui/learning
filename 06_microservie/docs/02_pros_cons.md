@@ -118,9 +118,9 @@ sequenceDiagram
 **デメリット側**
 
 - 運用複雑性: `docker-compose.yml` に Postgres 5 台と Go 6 プロセスと OTel スタックが並ぶ
-- 分散トランザクション: 補償ステップを `services/order/internal/saga/checkout.go::Step` で構造体として持つ
-- 観測性の困難: `bff/internal/middleware/traceid.go::TraceID` と `bff/internal/obs/tracing.go::InitTracing` を入れて初めて Jaeger 上に 1 本の trace として並ぶ
-- ネットワーク遅延と失敗: `services/payment/internal/flake/flake.go::ShouldFail` の擬似失敗に、`services/order/internal/saga/checkout.go::Run` の `backoff.Retry` 呼び出しと `gobreaker.CircuitBreaker` の初期化で対処する
+- 分散トランザクション: 補償ステップを `services/order/internal/saga/checkout.go::Run` の中で `LogStep` 呼び出しと逆順実行で実現する
+- 観測性の困難: `bff/internal/middleware/traceid.go::TraceID` と `bff/internal/obs/otel.go::InitTracing` を入れて初めて Jaeger 上に 1 本の trace として並ぶ
+- ネットワーク遅延と失敗: `services/payment/internal/flake/flake.go::ShouldFail` の擬似失敗に、`services/order/internal/client/inventory.go` の `backoff.Retry` 呼び出しと `services/order/internal/resilience/breaker.go::NewBreaker` のサーキットブレーカーで対処する
 
 ### 3.1 擬似失敗と BFF 集約が教えるもの
 

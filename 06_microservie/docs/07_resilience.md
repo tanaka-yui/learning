@@ -89,9 +89,9 @@ flowchart TB
 
 注文確定フロー全体は `services/order/internal/saga/checkout.go::Run` に集約されている。Step1〜Step3 を Reserve → Charge → Commit の順に進め、各ステップが失敗したら逆順に補償する Saga が、`Run` 内のシーケンシャルなコードとして並んでいる。
 
-リトライは Reserve 側に組み込まれている。`services/order/internal/saga/checkout.go` の `backoff.Retry` 呼び出しが指数バックオフ付き最大 3 回のリトライを回す。`FailedPrecondition`（在庫不足）が返った場合は `backoff.Permanent` でラップして即終了するため、業務的に回復不能なエラーで無駄なリトライを繰り返さない。
+リトライは Reserve 側に組み込まれている。`services/order/internal/client/inventory.go` の `backoff.Retry` 呼び出しが指数バックオフ付き最大 3 回のリトライを回す。`FailedPrecondition`（在庫不足）が返った場合は `backoff.Permanent` でラップして即終了するため、業務的に回復不能なエラーで無駄なリトライを繰り返さない。
 
-サーキットブレーカーは Payment 側に組み込まれている。`services/order/internal/saga/checkout.go` の `gobreaker.CircuitBreaker` の初期化で名前付きブレーカーを作り、`Charge` の実呼び出しを包む。失敗率 50% を超えて 5 件以上で Open、30 秒経つと Half-Open に遷移し試行 1 件で復旧判定をする。
+サーキットブレーカーは Payment 側に組み込まれている。`services/order/internal/resilience/breaker.go::NewBreaker` で名前付きブレーカーを作り、`services/order/internal/client/payment.go` の中で `Charge` の実呼び出しを包む。失敗率 50% を超えて 5 件以上で Open、30 秒経つと Half-Open に遷移し試行 1 件で復旧判定をする。
 
 擬似失敗注入は `services/payment/internal/flake/flake.go::ShouldFail` に集約してある。環境変数 `FLAKE_RATE` の確率で失敗を返すだけの薄い関数で、`Charge` ハンドラの先頭で呼ばれる。`make demo:retry`（`FLAKE_RATE=0.2`）でリトライ発火、`make demo:circuit`（`FLAKE_RATE=0.6`）でブレーカー Open 遷移を観察できる。
 

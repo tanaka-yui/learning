@@ -88,7 +88,7 @@ BFF はこの 5 サービスに対する集約点であり、REST から gRPC �
 
 BFF が商品一覧を返すときは、`catalog.ListProducts` で表示用情報を取り、各 `product_id` について `inventory.GetStock` で在庫数を取り、UI 層で合成する。**1 つの DB に JOIN を投げて済ませない**。両者の更新頻度・更新者・障害ドメインは異なるので、結合は呼び出し側（BFF）で行うのが妥当である。
 
-JWT 検証フローも分割を体現している。BFF の `bff/internal/middleware/auth.go::Auth` は受け取った Cookie の JWT を取り出し、`services/user-auth/internal/server/grpc.go::GetUser` を gRPC で呼んでユーザを解決する。BFF は JWT の構造を知らず、user-auth はトークン発行と検証（`services/user-auth/internal/jwt/manager.go::Issue` / `Verify`）の所有者である。`bff/internal/handler/auth.go::Auth.Me` は、この境界を経由して「自分のユーザ情報を返す」という UI 向け能力を提供する。
+JWT 検証フローも分割を体現している。BFF の `bff/internal/middleware/auth.go::Auth` は受け取った Cookie の JWT を取り出し、`services/user-auth/internal/server/grpc.go::GetUser` を gRPC で呼んでユーザを解決する。BFF は JWT の構造を知らず、user-auth はトークン発行と検証（`services/user-auth/internal/jwt/jwt.go::Issue` / `Verify`）の所有者である。`bff/internal/handler/auth.go::Auth.Me` は、この境界を経由して「自分のユーザ情報を返す」という UI 向け能力を提供する。
 
 ## 4. 落とし穴 / よくある誤解
 
