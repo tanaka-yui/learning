@@ -2,7 +2,18 @@
 
 ECサイトを題材に、小規模マイクロサービスの実装パターンを学ぶ章。
 
-> 本章は段階的に構築中です。詳細なドキュメントは `docs/` 配下に追加されます。
+## 学習動線
+
+1. [01: マイクロサービスとは](docs/01_concepts.md)
+2. [02: メリット・デメリット](docs/02_pros_cons.md)
+3. [03: コンウェイの法則と Team Topologies](docs/03_conway.md)
+4. [04: サービス分割](docs/04_decomposition.md)
+5. [05: 通信プロトコル](docs/05_communication.md)
+6. [06: データ所有](docs/06_data_ownership.md)
+7. [07: レジリエンス](docs/07_resilience.md)
+8. [08: 観測性](docs/08_observability.md)
+9. [09: 大規模化と Istio](docs/09_scaling_istio.md)
+10. [10: コード上のパターン索引](docs/10_patterns_in_code.md)
 
 ## 起動
 
@@ -18,8 +29,6 @@ make logs    # ログ
 |---|---|
 | http://localhost:8080/api/products | BFF REST API |
 | http://localhost:16686 | Jaeger UI（分散トレース） |
-
-詳細な学習動線は `docs/` に整備予定。
 
 ## クイックスタート
 
