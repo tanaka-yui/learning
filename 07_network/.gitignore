@@ -8,3 +8,9 @@ servers/lpp/cmd/client/client
 servers/websocket/websocket
 servers/websocket/cmd/sender/sender
 servers/websocket/cmd/receiver/receiver
+
+# Binaries produced by `go build ./cmd/foo` invoked from the module root
+# (the executable lands in the module root, named after the cmd dir).
+servers/lpp/client
+servers/websocket/sender
+servers/websocket/receiver
