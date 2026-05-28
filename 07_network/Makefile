@@ -17,3 +17,7 @@ demo-udp:
 .PHONY: demo-http
 demo-http:
 	curl -v http://localhost:9003/
+
+.PHONY: demo-dns
+demo-dns:
+	dig @localhost -p 5353 example.local +short

@@ -8,3 +8,6 @@ services:
   http:
     build: ./servers/http
     ports: ["9003:9003"]
+  dns:
+    build: ./servers/dns
+    ports: ["5353:5353/udp"]
