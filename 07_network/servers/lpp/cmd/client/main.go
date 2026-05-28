@@ -1,3 +1,5 @@
+// writeFrame/readFrame are intentionally copied from ../../frame.go;
+// both binaries are package main and cannot import each other.
 package main
 
 import (
