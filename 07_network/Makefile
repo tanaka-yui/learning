@@ -5,3 +5,7 @@ down:      ; docker compose down
 logs:      ; docker compose logs -f
 test:      ; go test ./servers/...
 test-race: ; go test -race ./servers/...
+
+.PHONY: demo-tcp
+demo-tcp:
+	echo "hello" | nc -w1 localhost 9001

@@ -1,1 +1,4 @@
-services: {}
+services:
+  tcp-echo:
+    build: ./servers/tcp-echo
+    ports: ["9001:9001"]
