@@ -372,7 +372,7 @@ sudo tcpdump -i lo0 'tcp port 9003' -X
 | 層 | 役割 | HTTP/1.1 での実装 | コード参照 |
 |---|---|---|---|
 | L7 アプリケーション | 何をしたいか（メソッド・パス・ステータス・本文の意味） | `GET /`・`200 OK`・`"Hello, world!"` | [server.go:43](../servers/http/server.go#L43) `L7: route` |
-| L6 プレゼンテーション | バイト列の表現形式（MIME・文字コード・本文サイズ） | `Content-Type: text/plain`・`Content-Length: 14`・CRLF 区切りテキスト行 | [server.go:56](../servers/http/server.go#L56) `writeResponse` |
+| L6 プレゼンテーション | バイト列の表現形式（MIME・文字コード・本文サイズ） | `Content-Type: text/plain`・`Content-Length: 14`・CRLF 区切りテキスト行 | [server.go:57](../servers/http/server.go#L57) `writeResponse` |
 | L5 セッション | 会話の管理（どのホスト宛か・接続を継続するか） | `Host: localhost:9003`・`Connection: close` | [http.go:51](../servers/http/http.go#L51) `case "host"` |
 
 `Host` ヘッダが L5 に属する理由は、同一 IP で複数の仮想ホストを運用する際に「どのサービスへのリクエストか」を識別するセッション的な情報だからである。`Connection: close` は「この TCP 接続をこのリクエストの後に閉じる」という接続ライフサイクルの宣言であり、これもセッション管理の一部に相当する。
