@@ -4,3 +4,4 @@ toolchain go1.26.0
 
 use ./servers/tcp-echo
 use ./servers/udp-echo
+use ./servers/http

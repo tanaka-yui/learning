@@ -13,3 +13,7 @@ demo-tcp:
 .PHONY: demo-udp
 demo-udp:
 	echo "hello" | nc -u -w1 localhost 9002
+
+.PHONY: demo-http
+demo-http:
+	curl -v http://localhost:9003/

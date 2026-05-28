@@ -5,3 +5,6 @@ services:
   udp-echo:
     build: ./servers/udp-echo
     ports: ["9002:9002/udp"]
+  http:
+    build: ./servers/http
+    ports: ["9003:9003"]
