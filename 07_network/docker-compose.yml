@@ -1,0 +1,19 @@
+services:
+  tcp-echo:
+    build: ./servers/tcp-echo
+    ports: ["9001:9001"]
+  udp-echo:
+    build: ./servers/udp-echo
+    ports: ["9002:9002/udp"]
+  http:
+    build: ./servers/http
+    ports: ["9003:9003"]
+  dns:
+    build: ./servers/dns
+    ports: ["5353:5353/udp"]
+  lpp:
+    build: ./servers/lpp
+    ports: ["9004:9004"]
+  websocket:
+    build: ./servers/websocket
+    ports: ["9005:9005"]
