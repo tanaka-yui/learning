@@ -6,3 +6,4 @@ use ./servers/tcp-echo
 use ./servers/udp-echo
 use ./servers/http
 use ./servers/dns
+use ./servers/lpp

@@ -11,3 +11,6 @@ services:
   dns:
     build: ./servers/dns
     ports: ["5353:5353/udp"]
+  lpp:
+    build: ./servers/lpp
+    ports: ["9004:9004"]

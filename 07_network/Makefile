@@ -21,3 +21,7 @@ demo-http:
 .PHONY: demo-dns
 demo-dns:
 	dig @localhost -p 5353 example.local +short
+
+.PHONY: demo-lpp
+demo-lpp:
+	go run ./servers/lpp/cmd/client PING
