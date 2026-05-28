@@ -83,7 +83,7 @@ func (s *Server) Serve() error {
 }
 ```
 
-`Accept()` はクライアントからの接続が来るまでブロックする。接続が来るたびに `go s.handle(conn)` でゴルーチンを起動するため、複数クライアントを同時に扱える。`net.ErrClosed` は `ln.Close()` を呼んだときに返るエラーで、グレースフルシャットダウンの判定に使う（[servers/tcp-echo/main.go:29](../servers/tcp-echo/main.go#L29) でシグナル受信時に `ln.Close()` を呼んでいる）。
+`Accept()` はクライアントからの接続が来るまでブロックする。接続が来るたびに `go s.handle(conn)` でゴルーチンを起動するため、複数クライアントを同時に扱える。`net.ErrClosed` は `ln.Close()` を呼んだときに返るエラーで、グレースフルシャットダウンの判定に使う（[servers/tcp-echo/main.go:30](../servers/tcp-echo/main.go#L30) でシグナル受信時に `ln.Close()` を呼んでいる）。
 
 ### handle
 
