@@ -15,6 +15,8 @@ func TestDecodeQNAME(t *testing.T) {
 		{"single label", []byte{3, 'w', 'w', 'w', 0}, "www", false},
 		{"two labels", []byte{7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 3, 'c', 'o', 'm', 0}, "example.com", false},
 		{"pointer (unsupported)", []byte{0xC0, 0x00}, "", true},
+		{"reserved label type 0x40", []byte{0x40, 0x00}, "", true},
+		{"label length over 63", []byte{64, 0x00}, "", true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

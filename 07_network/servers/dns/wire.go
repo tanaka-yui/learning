@@ -57,8 +57,15 @@ func DecodeQNAME(r io.ByteReader) (string, error) {
 		if n == 0 {
 			return strings.Join(parts, "."), nil
 		}
-		if n&0xC0 != 0 {
+		// Top two bits identify the label-type per RFC 1035 §4.1.4:
+		//   0b00xxxxxx → label length (0–63)
+		//   0b11xxxxxx → compressed pointer (rejected here)
+		//   others     → reserved / extended (rare; treated as malformed below)
+		if n&0xC0 == 0xC0 {
 			return "", errors.New("compressed pointer not supported in decoder")
+		}
+		if n > 63 {
+			return "", errors.New("invalid label length")
 		}
 		buf := make([]byte, n)
 		for i := range buf {
