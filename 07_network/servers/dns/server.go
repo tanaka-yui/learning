@@ -4,8 +4,17 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"io"
 	"log/slog"
 	"net"
+)
+
+// Response flag values per RFC 1035 §4.1.1.
+// Both responses set QR=1 and AA=1 (we are authoritative for the static zone)
+// and leave RD/RA at 0 since we do not perform recursion.
+const (
+	flagsNoError  uint16 = 0x8400 // QR=1 AA=1 RCODE=0 (NOERROR)
+	flagsNXDomain uint16 = 0x8403 // QR=1 AA=1 RCODE=3 (NXDOMAIN)
 )
 
 type Server struct {
@@ -56,7 +65,7 @@ func (s *Server) handle(msg []byte) ([]byte, error) {
 	}
 	s.log.Info("L6: decoded QNAME", "name", name)
 	tc := make([]byte, 4)
-	if _, err := r.Read(tc); err != nil {
+	if _, err := io.ReadFull(r, tc); err != nil {
 		return nil, err
 	}
 	qtype := binary.BigEndian.Uint16(tc[0:2])
@@ -67,16 +76,15 @@ func (s *Server) handle(msg []byte) ([]byte, error) {
 
 	ip, ok := s.zone[name]
 	if !ok {
-		// NXDOMAIN: flags=0x8183 (QR=1, AA=1, RCODE=3)
 		s.log.Info("L7: NXDOMAIN", "name", name)
-		out := Header{ID: h.ID, Flags: 0x8183, QDCount: 1}.Encode()
+		out := Header{ID: h.ID, Flags: flagsNXDomain, QDCount: 1}.Encode()
 		out = append(out, EncodeQNAME(name)...)
 		out = append(out, tc...)
 		return out, nil
 	}
 	s.log.Info("L7: answering A record", "name", name, "ip", ip.String())
 
-	out := Header{ID: h.ID, Flags: 0x8180, QDCount: 1, ANCount: 1}.Encode()
+	out := Header{ID: h.ID, Flags: flagsNoError, QDCount: 1, ANCount: 1}.Encode()
 	out = append(out, EncodeQNAME(name)...)
 	out = append(out, tc...)
 	out = append(out, EncodeAnswer(name, 60, ip)...)
