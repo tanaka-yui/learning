@@ -25,3 +25,9 @@ demo-dns:
 .PHONY: demo-lpp
 demo-lpp:
 	go run ./servers/lpp/cmd/client PING
+
+.PHONY: demo-ws
+demo-ws:
+	@echo "run sender/receiver in separate terminals:"
+	@echo "  go run ./servers/websocket/cmd/receiver -room demo"
+	@echo "  go run ./servers/websocket/cmd/sender   -room demo"
