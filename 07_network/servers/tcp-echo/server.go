@@ -38,13 +38,13 @@ func (s *Server) handle(conn net.Conn) {
 		if n > 0 {
 			s.log.Info("read", "n", n)
 			if _, werr := conn.Write(buf[:n]); werr != nil {
-				s.log.Info("write_err", "err", werr.Error())
+				s.log.Error("write_err", "err", werr.Error())
 				return
 			}
 		}
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
-				s.log.Info("read_err", "err", err.Error())
+				s.log.Error("read_err", "err", err.Error())
 			}
 			return
 		}

@@ -27,7 +27,7 @@ func (s *Server) Serve() error {
 		}
 		s.log.Info("read", "n", n, "from", addr.String())
 		if _, werr := s.pc.WriteTo(buf[:n], addr); werr != nil {
-			s.log.Info("write_err", "err", werr.Error())
+			s.log.Error("write_err", "err", werr.Error())
 		}
 	}
 }
