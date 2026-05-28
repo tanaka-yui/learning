@@ -49,7 +49,7 @@ UDP ────────┬─ 素の byte ────── (servers/udp-e
 ## 設計の柱
 
 - **stdlib only**: `net` / `net/http` / `encoding/binary` / `crypto/sha1` / `encoding/base64` / `log/slog` で完結
-- **Go バージョン**: 全モジュール `go 1.23`、Dockerfile は `golang:1.23-alpine` で統一
+- **Go バージョン**: 全モジュール `go 1.26`、Dockerfile は `golang:1.26-alpine` で統一
 - **各サーバーは独立 Go モジュール**: `go.work` で束ねる（06章と同じ）
 - **観察ツールは標準 UNIX ツール**: `tcpdump` / `ss` / `lsof` / `nc` / `curl` / `dig` / `xxd`
 - **1 ポート 1 サーバー**: DNS は 53/udp 衝突回避のためホスト側 `5353/udp` にマップ
@@ -293,7 +293,7 @@ services:
     ports: ["9005:9005"]
 ```
 
-- Dockerfile はサーバーごとに最小（multi-stage `golang:1.23-alpine` → `gcr.io/distroless/static`）
+- Dockerfile はサーバーごとに最小（multi-stage `golang:1.26-alpine` → `gcr.io/distroless/static`）
 - lpp / websocket のクライアント側は**ホストで `go run`**（外からサーバーを叩く体験を優先、コンテナ内 exec はしない）
 
 ## Makefile
