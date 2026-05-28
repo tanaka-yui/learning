@@ -76,21 +76,35 @@ func (s *Server) handle(conn net.Conn) {
 }
 
 type wsConn struct {
-	conn net.Conn
-	send chan []byte
-	once sync.Once
+	conn   net.Conn
+	send   chan []byte
+	mu     sync.Mutex
+	closed bool
 }
 
+// Send enqueues b for the writer goroutine.
+// Drops b on backpressure (channel full) and silently no-ops after close,
+// so a Broadcast that races Leave never panics on a closed channel.
 func (c *wsConn) Send(b []byte) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed {
+		return
+	}
 	select {
 	case c.send <- b:
 	default:
-		// drop on slow consumer (backpressure)
 	}
 }
 
 func (c *wsConn) close() {
-	c.once.Do(func() { close(c.send) })
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed {
+		return
+	}
+	c.closed = true
+	close(c.send)
 }
 
 func (c *wsConn) Close() error { c.close(); return nil }

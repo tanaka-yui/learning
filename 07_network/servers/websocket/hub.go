@@ -7,9 +7,10 @@ type Sender interface {
 }
 
 type Hub struct {
-	mu    sync.Mutex
-	rooms map[string]map[Sender]bool
-	done  chan struct{}
+	mu       sync.Mutex
+	rooms    map[string]map[Sender]bool
+	done     chan struct{}
+	stopOnce sync.Once
 }
 
 func NewHub() *Hub {
@@ -54,4 +55,4 @@ func (h *Hub) Broadcast(room string, from Sender, msg []byte) {
 
 // Run blocks until Stop is called. Reserved for future channel-based dispatch.
 func (h *Hub) Run()  { <-h.done }
-func (h *Hub) Stop() { close(h.done) }
+func (h *Hub) Stop() { h.stopOnce.Do(func() { close(h.done) }) }
