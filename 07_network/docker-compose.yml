@@ -2,3 +2,6 @@ services:
   tcp-echo:
     build: ./servers/tcp-echo
     ports: ["9001:9001"]
+  udp-echo:
+    build: ./servers/udp-echo
+    ports: ["9002:9002/udp"]

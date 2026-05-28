@@ -9,3 +9,7 @@ test-race: ; go test -race ./servers/...
 .PHONY: demo-tcp
 demo-tcp:
 	echo "hello" | nc -w1 localhost 9001
+
+.PHONY: demo-udp
+demo-udp:
+	echo "hello" | nc -u -w1 localhost 9002
