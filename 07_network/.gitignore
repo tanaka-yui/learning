@@ -1,0 +1,10 @@
+# Compiled server binaries (built locally by `go build`)
+servers/tcp-echo/tcp-echo
+servers/udp-echo/udp-echo
+servers/http/http
+servers/dns/dns
+servers/lpp/lpp
+servers/lpp/cmd/client/client
+servers/websocket/websocket
+servers/websocket/cmd/sender/sender
+servers/websocket/cmd/receiver/receiver
