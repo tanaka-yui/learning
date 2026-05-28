@@ -23,7 +23,9 @@ func ParseRequest(r *bufio.Reader) (*Request, error) {
 		return nil, err
 	}
 	line = strings.TrimRight(line, "\r\n")
-	parts := strings.Split(line, " ")
+	// SplitN with limit 3 keeps the parser tolerant of extra spaces inside Proto
+	// while still treating "<2 fields" as malformed below.
+	parts := strings.SplitN(line, " ", 3)
 	if len(parts) != 3 {
 		return nil, errors.New("malformed request line")
 	}

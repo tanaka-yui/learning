@@ -56,6 +56,7 @@ func (s *Server) handle(conn net.Conn) {
 // L6: Content-Type / Content-Length headers.
 func writeResponse(conn net.Conn, code int, contentType string, body []byte, closeIt bool) {
 	reason := map[int]string{200: "OK", 400: "Bad Request", 404: "Not Found", 405: "Method Not Allowed"}[code]
+	slog.Info("L6: write response", "code", code, "type", contentType, "len", len(body), "close", closeIt)
 	hdr := fmt.Sprintf("HTTP/1.1 %d %s\r\nContent-Type: %s\r\nContent-Length: %d\r\n",
 		code, reason, contentType, len(body))
 	if closeIt {
