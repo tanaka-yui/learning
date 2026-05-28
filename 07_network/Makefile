@@ -1,10 +1,17 @@
 .PHONY: up down logs test test-race
 
+# Each server is its own go module (tied together by go.work).
+# A workspace-wide pattern like ./servers/... is not a valid go test pattern,
+# so iterate per module instead.
+SERVER_DIRS := servers/tcp-echo servers/udp-echo servers/http servers/dns servers/lpp servers/websocket
+
 up:        ; docker compose up -d --build
 down:      ; docker compose down
 logs:      ; docker compose logs -f
-test:      ; go test ./servers/...
-test-race: ; go test -race ./servers/...
+test:
+	@for d in $(SERVER_DIRS); do (cd $$d && go test ./...) || exit $$?; done
+test-race:
+	@for d in $(SERVER_DIRS); do (cd $$d && go test -race ./...) || exit $$?; done
 
 .PHONY: demo-tcp
 demo-tcp:
