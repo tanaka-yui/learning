@@ -22,7 +22,7 @@
       "datasource": { "type": "prometheus", "uid": "mimir" },
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(http_server_errors_total[1m]))", "datasource": { "type": "prometheus", "uid": "mimir" } }
+        { "refId": "A", "expr": "sum(rate(http_server_errors_total[1m])) or vector(0)", "datasource": { "type": "prometheus", "uid": "mimir" } }
       ]
     },
     {

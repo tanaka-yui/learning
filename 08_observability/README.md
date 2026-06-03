@@ -33,6 +33,9 @@ make load
 make demo
 
 # エラー率を上げてエラー挙動を確認 (FLAKE_RATE=0〜1)
+# 既定は FLAKE_RATE=0.0 なので checkout は常に成功し、Error rate は「No data」になる。
+# 502 を発生させて Error rate を立ち上げたいときに設定する。アプリだけ作り直すなら:
+#   FLAKE_RATE=0.8 docker compose up -d --no-deps app
 FLAKE_RATE=0.8 make up
 
 # Go テスト
@@ -114,6 +117,7 @@ curl -s -G 'http://localhost:3100/loki/api/v1/query_range' \
 
 - **Exemplar**: Grafana UI 上でのメトリクス→トレースジャンプ体験を想定している。`enable_open_metrics: true` と `exemplarTraceIdDestinations` は設定済みだが、API での自動検証はしておらず、環境によっては Exemplar が表示されないことがある。
 - **メトリクス反映遅延**: アプリの export 間隔は `OTEL_METRIC_EXPORT_INTERVAL=10000`(10秒)。Prometheus の scrape 間隔も 5 秒のため、起動直後はメトリクスが Grafana に届くまで最大 ~15 秒の遅延がある。
+- **Error rate が「No data」になる**: `http_server_errors_total` は status>=500 が起きたときに初めて作られるカウンタなので、`FLAKE_RATE=0.0`(既定)だとエラーが0件で系列が存在せず、`rate()` の結果が空 → パネルが「No data」になる(0 ではなくデータなし)。これは「カウンタ系列は最初の観測まで存在しない」という観測の基本挙動。ダッシュボードでは `... or vector(0)` を付けて 0 表示にしてあるが、実際にエラーを見たいときは上記の `FLAKE_RATE` を上げる。
 
 ## 環境注意
 

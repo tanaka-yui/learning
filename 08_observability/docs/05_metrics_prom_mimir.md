@@ -143,6 +143,18 @@ sum(rate(http_server_requests_total[1m])) by (http_route)
 
 Grafana の Explore でデータソースを Mimir に切り替えてそのまま実行できる。
 
+### 「No data」と 0 の違い — カウンタ系列の生成タイミング
+
+`http_server_errors_total` のような OTel カウンタは、**最初にそのラベル組で観測(`Add`)されるまで系列が存在しない**。本章のミドルウェアはエラー(status>=500)のときだけ `errs.Add(...)` するため、`FLAKE_RATE=0.0`(既定)でエラーが0件のあいだは系列が作られず、`sum(rate(http_server_errors_total[1m]))` の結果は**空**になる。Grafana のパネルはこれを「**No data**」と表示する(値が 0 なのではなく、データが存在しない)。
+
+これは観測の基本的な落とし穴だ。「0 と表示したい」場合は PromQL 側で空ベクトルを 0 で埋める:
+
+```promql
+sum(rate(http_server_errors_total[1m])) or vector(0)
+```
+
+本章の RED ダッシュボード(`red.json`)の Error rate パネルはこの形にしてある。実際にエラーを発生させてグラフを立ち上げたいときは、`FLAKE_RATE` を上げてアプリを再起動する(`FLAKE_RATE=0.8 docker compose up -d --no-deps app`)。詳細は [01_concepts.md](./01_concepts.md) の3本柱と本章 README の「既知の制約」を参照。
+
 ---
 
 ## Exemplar — メトリクスからトレースへジャンプ
