@@ -6,6 +6,8 @@ services:
       FLAKE_RATE: "${FLAKE_RATE:-0.0}"
       # Export metrics every 10s instead of the SDK default 60s so the lab feels responsive.
       OTEL_METRIC_EXPORT_INTERVAL: "10000"
+      # Allow the browser frontend (different origin) to call the API.
+      CORS_ALLOW_ORIGIN: "http://localhost:5174"
     ports: ["9100:9100"]
     depends_on: [otel-collector]
 

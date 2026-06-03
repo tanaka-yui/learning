@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel"
 
 	"observability/app/internal/checkout"
+	"observability/app/internal/httpmw"
 	"observability/app/internal/obs"
 )
 
@@ -46,7 +47,13 @@ func main() {
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.Handle("POST /api/checkout", instrumentedCheckout(handler))
 
-	root := red(otelhttp.NewHandler(mux, "http"))
+	// CORS is outermost so the browser's OPTIONS preflight is answered before
+	// routing/metrics/tracing. The frontend origin is configurable for other setups.
+	corsOrigin := os.Getenv("CORS_ALLOW_ORIGIN")
+	if corsOrigin == "" {
+		corsOrigin = "http://localhost:5174"
+	}
+	root := httpmw.CORS(corsOrigin)(red(otelhttp.NewHandler(mux, "http")))
 
 	addr := ":9100"
 	slog.Info("starting checkout-api", "addr", addr, "flake_rate", flake)
