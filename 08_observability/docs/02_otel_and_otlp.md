@@ -69,6 +69,8 @@ OpenTelemetry は単一のライブラリではなく、**複数の仕様(specif
 
 どちらもペイロードは **Protocol Buffers** でシリアライズされる(HTTP は JSON も選べる)。本章ではサーバ間は効率の良い gRPC、ブラウザからは CORS と相性の良い HTTP を使う。
 
+> **gRPC サーバーはどこに立つのか** — ここでよく誤解されるが、**OTLP の gRPC サーバーは OTel Collector** であり、アプリではない。アプリは `otlptracegrpc` などを使う gRPC の**クライアント**として `otel-collector:4317` にダイヤルしてテレメトリを送るだけだ([03_otel_sdk_go.md](./03_otel_sdk_go.md))。Collector 側の `receivers.otlp.protocols.grpc`(`0.0.0.0:4317`)が受信用の gRPC サーバーを立てている([08_collector.md](./08_collector.md))。本章のアプリ自身は、API を提供する **HTTP サーバー(:9100)** だけを起動し、gRPC サーバーは持たない。06_microservie の各サービスはアプリ本体が gRPC サーバー(:50051 等)だったが、本章で gRPC が登場するのは「テレメトリのエクスポート経路」だけ、という違いに注意する。
+
 ### HTTP のエンドポイント
 
 HTTP/OTLP はシグナルごとに固定パスを持つ。
