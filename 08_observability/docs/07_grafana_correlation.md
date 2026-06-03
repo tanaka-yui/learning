@@ -1,4 +1,4 @@
-# 06_grafana_correlation: Grafana 相関設定とダッシュボード
+# 07_grafana_correlation: Grafana 相関設定とダッシュボード
 
 ## 3種のデータソース
 
@@ -181,6 +181,6 @@ disable_login_form = true
 
 **関連 doc:**
 - [01_concepts.md](./01_concepts.md) — 3本柱の概念と調査フロー
-- [04_metrics_prom_mimir.md](./04_metrics_prom_mimir.md) — Mimir とメトリクス経路の詳細
-- [05_logs_loki.md](./05_logs_loki.md) — Loki のラベル設計と LogQL
-- [03_traces_e2e.md](./03_traces_e2e.md) — Tempo でのトレース確認方法
+- [05_metrics_prom_mimir.md](./05_metrics_prom_mimir.md) — Mimir とメトリクス経路の詳細
+- [06_logs_loki.md](./06_logs_loki.md) — Loki のラベル設計と LogQL
+- [04_traces_e2e.md](./04_traces_e2e.md) — Tempo でのトレース確認方法

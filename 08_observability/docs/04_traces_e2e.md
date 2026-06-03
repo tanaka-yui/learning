@@ -1,4 +1,4 @@
-# 03_traces_e2e: ブラウザ→Go のエンドツーエンドトレース
+# 04_traces_e2e: ブラウザ→Go のエンドツーエンドトレース
 
 ## span / trace / trace context とは
 
@@ -145,5 +145,5 @@ curl http://localhost:3200/api/traces/<traceID>
 
 **関連 doc:**
 - [01_concepts.md](./01_concepts.md) — 3本柱の概念とスタック全体像
-- [02_otel_sdk_go.md](./02_otel_sdk_go.md) — Go 側の propagator 設定詳細
-- [07_collector.md](./07_collector.md) — Collector の CORS 設定と OTLP receiver
+- [03_otel_sdk_go.md](./03_otel_sdk_go.md) — Go 側の propagator 設定詳細
+- [08_collector.md](./08_collector.md) — Collector の CORS 設定と OTLP receiver

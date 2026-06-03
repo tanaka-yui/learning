@@ -1,4 +1,4 @@
-# 08_oss_landscape: OSS 観測性ツールのランドスケープ
+# 09_oss_landscape: OSS 観測性ツールのランドスケープ
 
 ## 本章の選択: Grafana LGTM スタック
 
@@ -111,5 +111,5 @@ Mimir monolithic モードは開発・小規模向けだ。本番大規模では
 
 **関連 doc:**
 - [01_concepts.md](./01_concepts.md) — 観測性の概念と OTel の立ち位置
-- [07_collector.md](./07_collector.md) — OTel Collector の設定(Alloy との比較の出発点)
-- [04_metrics_prom_mimir.md](./04_metrics_prom_mimir.md) — Mimir と Thanos・VictoriaMetrics の比較
+- [08_collector.md](./08_collector.md) — OTel Collector の設定(Alloy との比較の出発点)
+- [05_metrics_prom_mimir.md](./05_metrics_prom_mimir.md) — Mimir と Thanos・VictoriaMetrics の比較

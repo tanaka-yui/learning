@@ -1,4 +1,4 @@
-# 07_collector: OTel Collector の設定とパイプライン
+# 08_collector: OTel Collector の設定とパイプライン
 
 ## Collector の役割
 
@@ -158,5 +158,5 @@ OTel のメトリクス名 (`http.server.requests`) はドットをアンダー�
 
 **関連 doc:**
 - [01_concepts.md](./01_concepts.md) — スタック全体像とシグナルの概念
-- [02_otel_sdk_go.md](./02_otel_sdk_go.md) — アプリ側の OTLP exporter 設定
-- [03_traces_e2e.md](./03_traces_e2e.md) — Collector の CORS 設定がトレース連携に与える影響
+- [03_otel_sdk_go.md](./03_otel_sdk_go.md) — アプリ側の OTLP exporter 設定
+- [04_traces_e2e.md](./04_traces_e2e.md) — Collector の CORS 設定がトレース連携に与える影響

@@ -1,4 +1,4 @@
-# 02_otel_sdk_go: OTel Go SDK — 3プロバイダの初期化
+# 03_otel_sdk_go: OTel Go SDK — 3プロバイダの初期化
 
 ## 概要
 
@@ -182,5 +182,5 @@ dur,  _ := meter.Float64Histogram("http.server.duration", metric.WithUnit("ms"),
 
 **関連 doc:**
 - [01_concepts.md](./01_concepts.md) — 3本柱の概念とスタック全体像
-- [03_traces_e2e.md](./03_traces_e2e.md) — ブラウザ→Go の一貫トレース詳細
-- [07_collector.md](./07_collector.md) — Collector 側の受け取り設定
+- [04_traces_e2e.md](./04_traces_e2e.md) — ブラウザ→Go の一貫トレース詳細
+- [08_collector.md](./08_collector.md) — Collector 側の受け取り設定

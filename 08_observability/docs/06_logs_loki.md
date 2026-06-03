@@ -1,4 +1,4 @@
-# 05_logs_loki: 構造化ログと Loki
+# 06_logs_loki: 構造化ログと Loki
 
 ## 構造化ログとは
 
@@ -159,7 +159,7 @@ curl -s -G 'http://localhost:3100/loki/api/v1/query_range' \
 
 ### 逆方向 (Traces → Logs)
 
-Tempo でトレースを開き「Logs for this span」リンクをクリックすると、同じ `trace_id` を持つ Loki のログ行に飛ぶ。この双方向ジャンプは Grafana のデータソース相関設定 (`tracesToLogsV2`, `derivedFields`) によって実現している (詳細は [06_grafana_correlation.md](./06_grafana_correlation.md))。
+Tempo でトレースを開き「Logs for this span」リンクをクリックすると、同じ `trace_id` を持つ Loki のログ行に飛ぶ。この双方向ジャンプは Grafana のデータソース相関設定 (`tracesToLogsV2`, `derivedFields`) によって実現している (詳細は [07_grafana_correlation.md](./07_grafana_correlation.md))。
 
 ---
 
@@ -172,7 +172,7 @@ Tempo でトレースを開き「Logs for this span」リンクをクリック�
 
 **関連 doc:**
 - [01_concepts.md](./01_concepts.md) — 3本柱の概念と相関の考え方
-- [02_otel_sdk_go.md](./02_otel_sdk_go.md) — otelslog ブリッジと slog.InfoContext の実装
-- [03_traces_e2e.md](./03_traces_e2e.md) — trace_id が span を跨いで伝播する仕組み
-- [06_grafana_correlation.md](./06_grafana_correlation.md) — Loki derivedFields と Tempo へのジャンプ設定
-- [07_collector.md](./07_collector.md) — Collector の logs パイプライン設定
+- [03_otel_sdk_go.md](./03_otel_sdk_go.md) — otelslog ブリッジと slog.InfoContext の実装
+- [04_traces_e2e.md](./04_traces_e2e.md) — trace_id が span を跨いで伝播する仕組み
+- [07_grafana_correlation.md](./07_grafana_correlation.md) — Loki derivedFields と Tempo へのジャンプ設定
+- [08_collector.md](./08_collector.md) — Collector の logs パイプライン設定

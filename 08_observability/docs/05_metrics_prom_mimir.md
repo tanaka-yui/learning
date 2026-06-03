@@ -1,4 +1,4 @@
-# 04_metrics_prom_mimir: メトリクス・Prometheus・Mimir
+# 05_metrics_prom_mimir: メトリクス・Prometheus・Mimir
 
 ## メトリクスの種類: Counter と Histogram
 
@@ -168,6 +168,6 @@ Exemplar は **メトリクスの特定サンプルに trace_id を紐付ける�
 
 **関連 doc:**
 - [01_concepts.md](./01_concepts.md) — メトリクスの概念と全体スタック
-- [02_otel_sdk_go.md](./02_otel_sdk_go.md) — OTel Meter の初期化と RED ミドルウェア
-- [07_collector.md](./07_collector.md) — Collector の prometheus exporter 設定
-- [06_grafana_correlation.md](./06_grafana_correlation.md) — Mimir データソースと exemplarTraceIdDestinations
+- [03_otel_sdk_go.md](./03_otel_sdk_go.md) — OTel Meter の初期化と RED ミドルウェア
+- [08_collector.md](./08_collector.md) — Collector の prometheus exporter 設定
+- [07_grafana_correlation.md](./07_grafana_correlation.md) — Mimir データソースと exemplarTraceIdDestinations

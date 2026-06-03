@@ -5,13 +5,14 @@ Metrics / Traces / Logs の3本柱を1つの Go サービス + React フロン�
 ## 学習動線
 
 1. [01_concepts.md](docs/01_concepts.md) — 監視と観測性の違い、3本柱のデータモデル、OTel の立ち位置
-2. [02_otel_sdk_go.md](docs/02_otel_sdk_go.md) — Go SDK の3プロバイダ初期化・RED ミドルウェア・otelslog ブリッジ
-3. [03_traces_e2e.md](docs/03_traces_e2e.md) — W3C traceparent の仕組み・ブラウザ→Go の一貫トレース
-4. [04_metrics_prom_mimir.md](docs/04_metrics_prom_mimir.md) — RED/USE・Counter/Histogram・Prometheus と Mimir の役割分担・PromQL
-5. [05_logs_loki.md](docs/05_logs_loki.md) — 構造化ログ・slog+otelslog・Loki ラベル設計・LogQL
-6. [06_grafana_correlation.md](docs/06_grafana_correlation.md) — データソース provisioning・相関設定・RED ダッシュボード
-7. [07_collector.md](docs/07_collector.md) — Collector のパイプライン設定・agent vs gateway
-8. [08_oss_landscape.md](docs/08_oss_landscape.md) — Grafana LGTM の総括・代替 OSS ツールの比較
+2. [02_otel_and_otlp.md](docs/02_otel_and_otlp.md) — そもそも OTel とは・OTLP・データモデル・セマンティック規約・context 伝播の仕様
+3. [03_otel_sdk_go.md](docs/03_otel_sdk_go.md) — Go SDK の3プロバイダ初期化・RED ミドルウェア・otelslog ブリッジ
+4. [04_traces_e2e.md](docs/04_traces_e2e.md) — W3C traceparent の仕組み・ブラウザ→Go の一貫トレース
+5. [05_metrics_prom_mimir.md](docs/05_metrics_prom_mimir.md) — RED/USE・Counter/Histogram・Prometheus と Mimir の役割分担・PromQL
+6. [06_logs_loki.md](docs/06_logs_loki.md) — 構造化ログ・slog+otelslog・Loki ラベル設計・LogQL
+7. [07_grafana_correlation.md](docs/07_grafana_correlation.md) — データソース provisioning・相関設定・RED ダッシュボード
+8. [08_collector.md](docs/08_collector.md) — Collector のパイプライン設定・agent vs gateway
+9. [09_oss_landscape.md](docs/09_oss_landscape.md) — Grafana LGTM の総括・代替 OSS ツールの比較
 
 ## クイックスタート
 
