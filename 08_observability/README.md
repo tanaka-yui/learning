@@ -39,6 +39,11 @@ make demo
 #   FLAKE_RATE=0.8 docker compose up -d --no-deps app
 FLAKE_RATE=0.8 make up
 
+# レイテンシアラートのデモ (p95 を押し上げる)
+LATENCY_MS=500 docker compose up -d --no-deps app
+# 受信したアラートメールを確認
+open http://localhost:8025
+
 # Go テスト
 make test
 
@@ -60,6 +65,7 @@ make down
 | Collector gRPC | http://localhost:4319 | OTLP/gRPC 受け口 (内部主体) |
 | Collector HTTP | http://localhost:4320 | OTLP/HTTP 受け口 (内部主体) |
 | Collector Prom | http://localhost:8889 | Prometheus scrape エンドポイント |
+| Mailpit | http://localhost:8025 | アラートメールの受信トレイ(開発用 SMTP) |
 
 ## Grafana のダッシュボードとデータソース
 
@@ -80,6 +86,7 @@ provisioning で以下を自動登録する(`infra/grafana/provisioning/`)。Gra
 |---|---|
 | RED — checkout-api | アプリの Rate / Error rate / p95 latency([05_metrics_prom_mimir.md](docs/05_metrics_prom_mimir.md)) |
 | Stack overview — observability components | スタック各コンポーネントの死活(`up`)・ヒープ使用量・取り込みサンプル率 |
+| Logs — checkout-api | ログを service/level/trace_id で絞り込み |
 
 Prometheus は **アプリの RED メトリクス(collector:8889)に加え、prometheus / mimir / tempo / loki / grafana 自身の `/metrics`** も scrape する(`infra/prometheus/prometheus.yml`)。そのため「Prometheus → Targets」で6ターゲットが UP になり、Stack overview ダッシュボードで各コンポーネントの状態を一覧できる。これらのメトリクスは `remote_write` で Mimir にも入るため、Mimir データソースからでも同じ値を引ける。
 
@@ -141,6 +148,9 @@ curl -s -G 'http://localhost:3100/loki/api/v1/query_range' \
 - **Exemplar**: Grafana UI 上でのメトリクス→トレースジャンプ体験を想定している。`enable_open_metrics: true` と `exemplarTraceIdDestinations` は設定済みだが、API での自動検証はしておらず、環境によっては Exemplar が表示されないことがある。
 - **メトリクス反映遅延**: アプリの export 間隔は `OTEL_METRIC_EXPORT_INTERVAL=10000`(10秒)。Prometheus の scrape 間隔も 5 秒のため、起動直後はメトリクスが Grafana に届くまで最大 ~15 秒の遅延がある。
 - **Error rate が「No data」になる**: `http_server_errors_total` は status>=500 が起きたときに初めて作られるカウンタなので、`FLAKE_RATE=0.0`(既定)だとエラーが0件で系列が存在せず、`rate()` の結果が空 → パネルが「No data」になる(0 ではなくデータなし)。これは「カウンタ系列は最初の観測まで存在しない」という観測の基本挙動。ダッシュボードでは `... or vector(0)` を付けて 0 表示にしてあるが、実際にエラーを見たいときは上記の `FLAKE_RATE` を上げる。
+- **アラート発火の遅延**: `for:1m`(継続評価1分)+ 評価間隔30s + メトリクス反映(~10〜15秒)の組み合わせにより、ノブ(`FLAKE_RATE` / `LATENCY_MS`)を上げてからアラートメールが Mailpit に届くまで概ね1〜2分かかる。
+- **Traces Drilldown プラグイン**: `grafana-exploretraces-app` は Grafana 起動時にオンラインで取得される。オフライン環境では初回取得ができないため、Traces Drilldown のメニューが表示されない。
+- **サービスグラフの初期表示遅延**: Tempo metrics-generator が生成する `traces_service_graph_*` メトリクスが Mimir に書き込まれ、Grafana がクエリできる状態になるまで数十秒かかる。スタック起動直後は Service Graph タブが空のことがある。
 
 ## 環境注意
 
