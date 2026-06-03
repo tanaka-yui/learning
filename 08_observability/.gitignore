@@ -1,0 +1,6 @@
+# Go binaries
+/app/app
+/app/main
+# Node / Vite
+/frontend/node_modules/
+/frontend/dist/
