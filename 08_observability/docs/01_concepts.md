@@ -99,6 +99,7 @@ OTel が「そもそも何を標準化したプロジェクトなのか」、そ
 | **07_grafana_correlation.md** | データソース相関・3本柱の往復・RED ダッシュボード |
 | **08_collector.md** | Collector の設定・パイプライン・デプロイ形態 |
 | **09_oss_landscape.md** | 最近人気の観測 OSS の比較・提案 |
+| **10_alerting_servicegraph.md** | Grafana アラートメール(Mailpit)・サービスグラフ(Tempo metrics-generator) |
 
 ---
 

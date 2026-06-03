@@ -13,6 +13,7 @@ Metrics / Traces / Logs の3本柱を1つの Go サービス + React フロン�
 7. [07_grafana_correlation.md](docs/07_grafana_correlation.md) — データソース provisioning・相関設定・RED ダッシュボード
 8. [08_collector.md](docs/08_collector.md) — Collector のパイプライン設定・agent vs gateway
 9. [09_oss_landscape.md](docs/09_oss_landscape.md) — Grafana LGTM の総括・代替 OSS ツールの比較
+10. [10_alerting_servicegraph.md](docs/10_alerting_servicegraph.md) — Grafana アラートメール(Mailpit)・サービスグラフ・Traces Drilldown
 
 ## クイックスタート
 
