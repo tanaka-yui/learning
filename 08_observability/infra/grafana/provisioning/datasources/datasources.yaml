@@ -25,6 +25,10 @@ datasources:
         filterByTraceID: true
       tracesToMetrics:
         datasourceUid: mimir
+      serviceMap:
+        datasourceUid: mimir
+      nodeGraph:
+        enabled: true
 
   - name: Loki
     type: loki

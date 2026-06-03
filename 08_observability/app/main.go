@@ -35,7 +35,7 @@ func main() {
 	slog.SetDefault(logger)
 
 	flake := parseFlake(os.Getenv("FLAKE_RATE"))
-	svc := checkout.NewService(flake)
+	svc := checkout.NewService(flake).WithLatency(parseLatency(os.Getenv("LATENCY_MS")))
 	handler := checkout.NewHandler(svc)
 
 	red, err := obs.NewREDMiddleware(serviceName)
@@ -82,4 +82,15 @@ func parseFlake(s string) float64 {
 		return 0.0
 	}
 	return f
+}
+
+func parseLatency(s string) time.Duration {
+	if s == "" {
+		return 0
+	}
+	ms, err := strconv.Atoi(s)
+	if err != nil || ms < 0 {
+		return 0
+	}
+	return time.Duration(ms) * time.Millisecond
 }

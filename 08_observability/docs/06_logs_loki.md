@@ -163,6 +163,47 @@ Tempo でトレースを開き「Logs for this span」リンクをクリック�
 
 ---
 
+## Grafana でログを探索する
+
+### Explore → Loki での基本クエリ
+
+Grafana の Explore (`http://localhost:3001/explore`) でデータソースに **Loki** を選択し、以下のクエリを入力する。
+
+```logql
+# checkout-api の全ログを JSON パースして表示
+{service_name="checkout-api"} | json
+```
+
+`| json` パーサーを付けることで、ログ行の JSON フィールド(`level`, `msg`, `path`, `trace_id` 等)が個別のカラムとして表示される。
+
+**特定の trace_id で絞り込む**
+
+Tempo でトレースを確認していて、対応するログを探したいときは以下のように絞り込む。
+
+```logql
+{service_name="checkout-api"} | json | trace_id = "4bf92f3577b34da6a3ce929d0e0e4736"
+```
+
+`trace_id` は structured metadata として保存されているため、`| json` パーサー経由でフィルタできる。
+
+**ログ行から Tempo へジャンプ**
+
+Loki クエリ結果のログ行には `trace_id` フィールドが表示される。このフィールドをクリックすると、Grafana の Tempo データソース相関設定(`tracesToLogsV2`, `derivedFields`)によって **Tempo の該当トレース画面に1クリックでジャンプ**できる。逆方向(Tempo → Loki)は Tempo のトレース詳細で「Logs for this span」をクリックする。
+
+### Logs ダッシュボード "Logs — checkout-api"
+
+provisioning で登録済みの **"Logs — checkout-api"** ダッシュボードは、3つのテンプレート変数で絞り込みを行える。
+
+| テンプレート変数 | 説明 | 使い方の例 |
+|---|---|---|
+| `service` | サービス名(`service_name` ラベル) | `checkout-api` を選択してサービス単位で絞る |
+| `level` | ログレベル(`severity_text` フィールド) | `ERROR` のみを選択してエラーだけ表示する |
+| `trace_id` | トレース ID(部分一致テキスト) | 特定のトレース ID を入力して1リクエストのログを追う |
+
+ダッシュボードのドロップダウンで `level=ERROR` に絞ると、エラー発生時のログだけが絞り込まれてパネルに表示される。`trace_id` 変数に Tempo で確認したトレース ID を貼り付けると、そのリクエストのログ行だけが抽出される。
+
+---
+
 ## まとめ / 関連 doc
 
 - 構造化ログはフィールド単位の検索と trace_id による相関を可能にする。

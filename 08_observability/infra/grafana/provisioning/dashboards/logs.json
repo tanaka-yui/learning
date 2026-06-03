@@ -1,0 +1,49 @@
+{
+  "title": "Logs — checkout-api",
+  "schemaVersion": 39,
+  "editable": true,
+  "time": { "from": "now-15m", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "loki" },
+        "query": { "label": "service_name", "stream": "", "type": 1 },
+        "refresh": 1,
+        "current": { "text": "checkout-api", "value": "checkout-api" }
+      },
+      {
+        "name": "level",
+        "type": "custom",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "query": "INFO,WARN,ERROR",
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "trace_id",
+        "type": "textbox",
+        "current": { "text": "", "value": "" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Logs",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 20, "w": 24, "x": 0, "y": 0 },
+      "options": { "showTime": true, "wrapLogMessage": true, "dedupStrategy": "none", "enableLogDetails": true, "sortOrder": "Descending" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{service_name=\"$service\"} | json | severity_text=~\"$level\" | trace_id=~\".*$trace_id.*\""
+        }
+      ]
+    }
+  ]
+}
