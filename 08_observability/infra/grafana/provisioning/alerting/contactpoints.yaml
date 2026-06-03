@@ -1,0 +1,10 @@
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: email-mailpit
+    receivers:
+      - uid: email_mailpit
+        type: email
+        settings:
+          addresses: alerts@checkout.local
+        disableResolveMessage: false

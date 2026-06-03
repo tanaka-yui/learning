@@ -1,0 +1,71 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: checkout-red
+    folder: Checkout Alerts
+    interval: 30s
+    rules:
+      - uid: high_error_rate
+        title: High error rate (checkout-api)
+        condition: C
+        for: 1m
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: "checkout-api error rate is elevated"
+        labels:
+          severity: critical
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: mimir
+            model:
+              refId: A
+              editorMode: code
+              expr: "sum(rate(http_server_errors_total[1m]))"
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.05]
+      - uid: high_p95_latency
+        title: High p95 latency (checkout-api)
+        condition: C
+        for: 1m
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: "checkout-api p95 latency is high"
+        labels:
+          severity: warning
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: mimir
+            model:
+              refId: A
+              editorMode: code
+              expr: "histogram_quantile(0.95, sum(rate(http_server_duration_milliseconds_bucket[1m])) by (le))"
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [200]
