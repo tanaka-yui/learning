@@ -4,6 +4,8 @@ services:
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
       FLAKE_RATE: "${FLAKE_RATE:-0.0}"
+      # Export metrics every 10s instead of the SDK default 60s so the lab feels responsive.
+      OTEL_METRIC_EXPORT_INTERVAL: "10000"
     ports: ["9100:9100"]
     depends_on: [otel-collector]
 
