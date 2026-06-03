@@ -37,3 +37,11 @@ datasources:
           matcherRegex: "trace_id=(\\w+)"
           url: "$${__value.raw}"
           datasourceUid: tempo
+
+  # Prometheus 本体(短期・scrape 側)を直接見るためのデータソース。
+  # スタック各コンポーネントの死活/運用メトリクスはこちらから引く。
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:9090

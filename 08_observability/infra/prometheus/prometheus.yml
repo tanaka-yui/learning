@@ -3,9 +3,27 @@ global:
   evaluation_interval: 5s
 
 scrape_configs:
+  # アプリの RED メトリクス(OTel Collector の prometheus exporter 経由)
   - job_name: otel-collector
     static_configs:
       - targets: ["otel-collector:8889"]
+
+  # 観測スタック自身の運用メトリクス(各コンポーネントの /metrics)
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+  - job_name: mimir
+    static_configs:
+      - targets: ["mimir:9009"]
+  - job_name: tempo
+    static_configs:
+      - targets: ["tempo:3200"]
+  - job_name: loki
+    static_configs:
+      - targets: ["loki:3100"]
+  - job_name: grafana
+    static_configs:
+      - targets: ["grafana:3000"]
 
 remote_write:
   - url: http://mimir:9009/api/v1/push

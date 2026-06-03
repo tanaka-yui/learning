@@ -60,6 +60,28 @@ make down
 | Collector HTTP | http://localhost:4320 | OTLP/HTTP 受け口 (内部主体) |
 | Collector Prom | http://localhost:8889 | Prometheus scrape エンドポイント |
 
+## Grafana のダッシュボードとデータソース
+
+provisioning で以下を自動登録する(`infra/grafana/provisioning/`)。Grafana の「Dashboards」「Connections → Data sources」から確認できる。
+
+**データソース**
+
+| 名前 | 種別 | 用途 |
+|---|---|---|
+| Mimir | prometheus | 長期メトリクス(アプリ + スタック)。既定データソース |
+| Prometheus | prometheus | scrape 側を直接参照。各コンポーネントの死活/運用メトリクス向け |
+| Tempo | tempo | トレース。logs/metrics への相関リンク付き |
+| Loki | loki | ログ。trace_id でトレースへジャンプ |
+
+**ダッシュボード**
+
+| 名前 | 内容 |
+|---|---|
+| RED — checkout-api | アプリの Rate / Error rate / p95 latency([05_metrics_prom_mimir.md](docs/05_metrics_prom_mimir.md)) |
+| Stack overview — observability components | スタック各コンポーネントの死活(`up`)・ヒープ使用量・取り込みサンプル率 |
+
+Prometheus は **アプリの RED メトリクス(collector:8889)に加え、prometheus / mimir / tempo / loki / grafana 自身の `/metrics`** も scrape する(`infra/prometheus/prometheus.yml`)。そのため「Prometheus → Targets」で6ターゲットが UP になり、Stack overview ダッシュボードで各コンポーネントの状態を一覧できる。これらのメトリクスは `remote_write` で Mimir にも入るため、Mimir データソースからでも同じ値を引ける。
+
 ## アーキテクチャ
 
 ```
