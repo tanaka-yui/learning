@@ -1,0 +1,14 @@
+# ロール権限定義 (PDP が読み込むポリシー)
+# p = ロール, リソース, アクション
+p, admin,  /docs,    GET
+p, admin,  /docs,    POST
+p, admin,  /docs,    DELETE
+p, editor, /docs,    GET
+p, editor, /docs,    POST
+p, viewer, /docs,    GET
+
+# ユーザ→ロールのグループ割り当て
+# g = ユーザ, ロール
+g, alice,       admin
+g, bob,         editor
+g, carol,       viewer
