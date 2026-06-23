@@ -1,0 +1,7 @@
+services:
+  session:
+    build: ./session
+    ports:
+      - "9000:8080"
+    profiles:
+      - session
