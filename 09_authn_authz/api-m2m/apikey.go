@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/json"
 	"net/http"
@@ -22,15 +23,16 @@ const indexHTML = `<!doctype html>
 <p>mTLS: https://localhost:8443/mtls/data にクライアント証明書付きでアクセスしてください。</p>
 </body></html>`
 
-// lookupAPIKey はキーを定数時間比較でシード済みキー群と照合し、クライアント名を返す
-// 一致するキーが存在しない場合は空文字と false を返す
+// lookupAPIKey はキーをSHA-256で固定長ダイジェスト化してから定数時間比較し、
+// 長さ・内容のいずれもタイミングで漏らさない。一致するキーが存在しない場合は空文字と false を返す。
 func lookupAPIKey(provided string) (string, bool) {
-	providedBytes := []byte(provided)
+	providedDigest := sha256.Sum256([]byte(provided))
 	found := false
 	var clientName string
 	for k, v := range seededAPIKeys {
-		// 定数時間比較: タイミング攻撃を防ぐ
-		if subtle.ConstantTimeCompare([]byte(k), providedBytes) == 1 {
+		// 鍵をSHA-256で固定長ダイジェスト化してから定数時間比較し、長さ・内容のいずれもタイミングで漏らさない
+		seedDigest := sha256.Sum256([]byte(k))
+		if subtle.ConstantTimeCompare(seedDigest[:], providedDigest[:]) == 1 {
 			found = true
 			clientName = v
 		}

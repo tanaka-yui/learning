@@ -33,7 +33,9 @@ M2M (Machine-to-Machine) 認証とは、ユーザが介在しないサービス�
   |<-- 200 {client} ---|  (一致) or 401 (不一致)
 ```
 
-通常の文字列比較は最初の不一致バイトで早期リターンするため、応答時間からキーの前方一致長を推測できます（タイミング攻撃）。`ConstantTimeCompare` は比較時間がキーの長さのみに依存し、内容に依存しないため、この攻撃を防ぎます。
+通常の文字列比較は最初の不一致バイトで早期リターンするため、応答時間からキーの前方一致長を推測できます（タイミング攻撃）。`ConstantTimeCompare` は内容のタイミング漏洩を防ぎますが、**長さが異なる入力に対しては即座に 0 を返す**ため、長さ自体がタイミングで漏洩します。
+
+これを防ぐため、このデモでは比較前に両方のキーを `sha256.Sum256` で固定長 32 バイトのダイジェストに変換してから `ConstantTimeCompare` で比較します。固定長ダイジェストにより、入力の長さも内容も応答時間に依存しなくなります。
 
 ### mTLS — 相互証明書検証
 
@@ -77,6 +79,8 @@ make api-m2m
 
 - API Key サーバ: `http://localhost:9400`
 - mTLS サーバ: `https://localhost:9401`
+
+> **補足**: ポート 9400/9401 は docker-compose のポートマッピング (`9400:8080`, `9401:8443`) によるホスト側ポートです。バイナリを直接実行した場合はコンテナ内ポート `:8080` / `:8443` でリッスンします。
 
 ---
 
@@ -126,11 +130,13 @@ curl -s https://localhost:9401/mtls/data \
 
 ```go
 func lookupAPIKey(provided string) (string, bool) {
-    providedBytes := []byte(provided)
+    providedDigest := sha256.Sum256([]byte(provided))
     found := false
     var clientName string
     for k, v := range seededAPIKeys {
-        if subtle.ConstantTimeCompare([]byte(k), providedBytes) == 1 {
+        // 鍵をSHA-256で固定長ダイジェスト化してから定数時間比較し、長さ・内容のいずれもタイミングで漏らさない
+        seedDigest := sha256.Sum256([]byte(k))
+        if subtle.ConstantTimeCompare(seedDigest[:], providedDigest[:]) == 1 {
             found = true
             clientName = v
         }
@@ -140,6 +146,7 @@ func lookupAPIKey(provided string) (string, bool) {
 ```
 
 ポイント:
+- `sha256.Sum256` で固定長 32 バイトに揃えてから比較: `ConstantTimeCompare` は長さ違いで即 0 を返すため、長さをハッシュで隠蔽します。
 - 一致しても `break` しない: 全件を走査することで、キーの存在有無に関わらず一定の処理時間を確保します。
 - `extractAPIKey` で `X-API-Key` ヘッダと `Authorization: Bearer` を両対応します。
 
@@ -166,7 +173,7 @@ tlsConfig := &tls.Config{
 
 | 実装ポイント | 内容 |
 |------------|------|
-| API Key 定数時間比較 | `crypto/subtle.ConstantTimeCompare` でタイミング攻撃を防止 |
+| API Key 定数時間比較 | SHA-256 で固定長ダイジェスト化後に `crypto/subtle.ConstantTimeCompare` で比較し、長さ・内容のタイミング漏洩を防止 |
 | 両ヘッダ対応 | `X-API-Key` と `Authorization: Bearer` を `extractAPIKey` で統一処理 |
 | mTLS 相互検証 | `tls.RequireAndVerifyClientCert` + CA プールで TLS レイヤーで認証 |
 | 証明書なし時のグレースフルスキップ | `startMTLSServer` は証明書未生成時にエラーではなくログを出して継続 |
