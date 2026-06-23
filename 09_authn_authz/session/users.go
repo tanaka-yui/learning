@@ -4,7 +4,8 @@ import "golang.org/x/crypto/bcrypt"
 
 // UserStore はテストユーザの認証情報を保持する(学習用シード)
 type UserStore struct {
-	hashes map[string]string // username -> bcryptハッシュ
+	hashes    map[string]string // username -> bcryptハッシュ
+	dummyHash []byte            // ユーザ不在時の比較用ダミー(有効なbcryptハッシュ)
 }
 
 // seedUsers はテスト用の平文パスワード(学習用途のため明示)
@@ -23,15 +24,20 @@ func NewUserStore() *UserStore {
 		}
 		hashes[name] = string(h)
 	}
-	return &UserStore{hashes: hashes}
+	// ユーザ不在時の比較に使う有効なダミーハッシュを生成しておく
+	dummy, err := bcrypt.GenerateFromPassword([]byte("dummy-password-for-timing"), bcrypt.DefaultCost)
+	if err != nil {
+		panic(err)
+	}
+	return &UserStore{hashes: hashes, dummyHash: dummy}
 }
 
 // Verify はユーザ名とパスワードの組が正しいか判定する
 func (u *UserStore) Verify(username, password string) bool {
 	h, ok := u.hashes[username]
 	if !ok {
-		// ユーザ不在でも比較を行いタイミング差を抑える
-		bcrypt.CompareHashAndPassword([]byte("$2a$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinv"), []byte(password))
+		// ユーザ不在でも有効なハッシュと比較し、応答時間の差(ユーザ列挙)を抑える
+		bcrypt.CompareHashAndPassword(u.dummyHash, []byte(password))
 		return false
 	}
 	return bcrypt.CompareHashAndPassword([]byte(h), []byte(password)) == nil
