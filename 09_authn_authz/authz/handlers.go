@@ -14,11 +14,16 @@ const indexHTML = `<!doctype html>
 <h1>RBAC/ABAC認可デモ</h1>
 <p>X-User ヘッダでユーザを指定してください。</p>
 <ul>
-  <li>alice → admin ロール (GET/POST/DELETE /docs すべて許可)</li>
-  <li>bob → editor ロール (GET/POST /docs 許可、DELETE 禁止)</li>
+  <li>alice → admin ロール (editor/viewer を継承し GET/POST/DELETE /docs すべて許可)</li>
+  <li>bob → editor ロール (viewer を継承し GET/POST /docs 許可、DELETE 禁止)</li>
   <li>carol → viewer ロール (GET /docs のみ許可)</li>
 </ul>
-<p>ABAC: POST /docs/{id}/edit で所有者のみ編集可能</p>
+<p>POST /docs/{id}/edit は RBAC と ABAC の両方を満たす場合のみ編集可能:</p>
+<ul>
+  <li>RBAC: 書き込み権限 (POST /docs) を持つこと (editor 以上)</li>
+  <li>ABAC: そのリソースの所有者であること (sub == resource.Owner)</li>
+</ul>
+<p>例: carol は viewer なので自分の所有リソースでも編集不可 (RBAC で拒否)。bob は editor なので自分の所有リソースのみ編集可。</p>
 </body></html>`
 
 // setupRouter は RBAC エンフォーサを受け取り http.Handler を構築する。
@@ -47,18 +52,29 @@ func setupRouter(rbac *casbin.Enforcer, abac *casbin.Enforcer) http.Handler {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "削除しました", "id": id})
 	}))
 
-	// ABAC 保護ルート: POST /docs/{id}/edit (所有者のみ)
+	// RBAC + ABAC 多層防御ルート: POST /docs/{id}/edit
+	// (a) RBAC: 書き込み権限 (POST /docs) を持つこと (editor 以上) と
+	// (b) ABAC: そのリソースの所有者であること (sub == resource.Owner)
+	// の両方を満たした場合のみ許可する。どちらか一方でも欠ければ 403。
+	// これにより viewer が自分の所有リソースでも編集できないことを保証する。
 	mux.HandleFunc("POST /docs/{id}/edit", func(w http.ResponseWriter, r *http.Request) {
 		sub := r.Header.Get("X-User")
 		if sub == "" {
 			http.Error(w, "X-User ヘッダが必要です", http.StatusUnauthorized)
 			return
 		}
+		// (a) RBAC: 書き込み (POST /docs) 権限を持つロールかを判定する。
+		rbacOK, rbacErr := rbac.Enforce(sub, "/docs", "POST")
+		if rbacErr != nil || !rbacOK {
+			http.Error(w, "アクセス拒否(書き込み権限がありません)", http.StatusForbidden)
+			return
+		}
+		// (b) ABAC: リソース所有者本人かを判定する。
 		id := r.PathValue("id")
 		// インメモリのリソース所有者マップ(学習用固定値)
 		res := lookupResource(id)
-		allowed, err := abac.Enforce(sub, res, "edit")
-		if err != nil || !allowed {
+		abacOK, abacErr := abac.Enforce(sub, res, "edit")
+		if abacErr != nil || !abacOK {
 			http.Error(w, "アクセス拒否(所有者のみ編集可能)", http.StatusForbidden)
 			return
 		}

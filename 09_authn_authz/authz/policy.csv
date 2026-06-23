@@ -1,11 +1,19 @@
 # ロール権限定義 (PDP が読み込むポリシー)
 # p = ロール, リソース, アクション
-p, admin,  /docs,    GET
-p, admin,  /docs,    POST
-p, admin,  /docs,    DELETE
-p, editor, /docs,    GET
-p, editor, /docs,    POST
+# 各能力を「それを持つべき最下位ロール」に付与し、ロール継承で上位ロールに伝播させる。
+#   viewer → GET /docs (閲覧)
+#   editor → POST /docs (作成) … editor は viewer を継承するので GET も可能
+#   admin  → DELETE /docs (削除) … admin は editor/viewer を継承するので GET/POST も可能
 p, viewer, /docs,    GET
+p, editor, /docs,    POST
+p, admin,  /docs,    DELETE
+
+# ロール階層 (ロール継承)
+# g = 下位ロール, 上位継承元  ……ではなく casbin の g は「左が右の権限を継承する」
+# g, admin, editor → admin は editor のポリシーをすべて継承する
+# g, editor, viewer → editor は viewer のポリシーをすべて継承する
+g, admin,  editor
+g, editor, viewer
 
 # ユーザ→ロールのグループ割り当て
 # g = ユーザ, ロール

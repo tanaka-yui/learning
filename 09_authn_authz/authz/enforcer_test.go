@@ -83,30 +83,54 @@ func TestRBACEnforcer_ViewerCanReadOnly(t *testing.T) {
 	}
 }
 
-// TestRBACEnforcer_RoleInheritance はロール継承(admin>editor>viewer)が機能することを検証する
+// TestRBACEnforcer_RoleInheritance はロール継承(admin>editor>viewer)が
+// 実際に権限へ伝播することを検証する。
+// 各能力は最下位ロールにのみ付与されており(viewer→GET, editor→POST, admin→DELETE)、
+// 上位ロールはそれを継承して許可されなければならない。
 func TestRBACEnforcer_RoleInheritance(t *testing.T) {
 	e, err := newRBACEnforcer()
 	if err != nil {
 		t.Fatalf("エンフォーサ初期化失敗: %v", err)
 	}
 
-	// alice は admin なので admin のポリシーがすべて適用される
+	// editor(bob) は viewer の GET 権限を継承する(POST は editor 直付与)。
+	allowed, err := e.Enforce("bob", "/docs", "GET")
+	if err != nil {
+		t.Fatalf("Enforce エラー: %v", err)
+	}
+	if !allowed {
+		t.Error("editor(bob) は viewer から GET を継承するべきですが拒否されました")
+	}
+
+	// admin(alice) は editor の POST と viewer の GET を継承する(DELETE は admin 直付与)。
+	for _, act := range []string{"GET", "POST"} {
+		allowed, err := e.Enforce("alice", "/docs", act)
+		if err != nil {
+			t.Fatalf("Enforce エラー: %v", err)
+		}
+		if !allowed {
+			t.Errorf("admin(alice) は下位ロールから %s を継承するべきですが拒否されました", act)
+		}
+	}
+
+	// 継承の階層が g で表現されていることも確認する。
 	roles, err := e.GetRolesForUser("alice")
 	if err != nil {
 		t.Fatalf("GetRolesForUser エラー: %v", err)
 	}
-	if len(roles) == 0 || roles[0] != "admin" {
-		t.Errorf("alice のロール = %v, want [admin]", roles)
+	if !contains(roles, "admin") {
+		t.Errorf("alice のロール = %v, want admin を含むこと", roles)
 	}
+}
 
-	// bob は editor
-	roles, err = e.GetRolesForUser("bob")
-	if err != nil {
-		t.Fatalf("GetRolesForUser エラー: %v", err)
+// contains はスライスに目的の文字列が含まれるかを返す小ヘルパー。
+func contains(xs []string, target string) bool {
+	for _, x := range xs {
+		if x == target {
+			return true
+		}
 	}
-	if len(roles) == 0 || roles[0] != "editor" {
-		t.Errorf("bob のロール = %v, want [editor]", roles)
-	}
+	return false
 }
 
 // TestABACEnforcer_OwnerCanEdit は所有者がリソースを編集できることを検証する

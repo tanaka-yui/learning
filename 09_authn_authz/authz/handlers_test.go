@@ -113,3 +113,42 @@ func TestRBAC_UnknownUserDenied(t *testing.T) {
 	assertStatus(t, doReq(t, server, http.MethodGet, "/docs", "viewer-user"), http.StatusForbidden)
 	assertStatus(t, doReq(t, server, http.MethodPost, "/docs", "viewer-user"), http.StatusForbidden)
 }
+
+// TestEdit_ViewerOwnerDeniedByRBAC は viewer(carol)が自分の所有リソース(doc3)を
+// 編集しようとしても RBAC の書き込み権限がないため 403 になることを検証する。
+// これは「ABAC 単独ガードによる認可バイパス」の修正(RBAC+ABAC 多層化)を保証する回帰テスト。
+func TestEdit_ViewerOwnerDeniedByRBAC(t *testing.T) {
+	server := newTestServer(t)
+	defer server.Close()
+
+	// carol は doc3 の所有者だが viewer なので書き込み(POST /docs)権限がない → 403
+	assertStatus(t, doReq(t, server, http.MethodPost, "/docs/doc3/edit", "carol"), http.StatusForbidden)
+}
+
+// TestEdit_EditorOwnerAllowed は editor(bob)が自分の所有リソース(doc2)を
+// 編集できる(RBAC 書き込み可 かつ ABAC 所有者一致)ことを検証する。
+func TestEdit_EditorOwnerAllowed(t *testing.T) {
+	server := newTestServer(t)
+	defer server.Close()
+
+	// bob は editor かつ doc2 の所有者 → 200
+	assertStatus(t, doReq(t, server, http.MethodPost, "/docs/doc2/edit", "bob"), http.StatusOK)
+}
+
+// TestEdit_EditorNonOwnerDeniedByABAC は editor(bob)が他人の所有リソース(doc1, alice所有)を
+// 編集しようとすると ABAC の所有者チェックで拒否され 403 になることを検証する。
+func TestEdit_EditorNonOwnerDeniedByABAC(t *testing.T) {
+	server := newTestServer(t)
+	defer server.Close()
+
+	// bob は editor だが doc1 の所有者ではない(所有者は alice) → ABAC で 403
+	assertStatus(t, doReq(t, server, http.MethodPost, "/docs/doc1/edit", "bob"), http.StatusForbidden)
+}
+
+// TestEdit_NoUserHeaderReturnsUnauthorized は X-User なしで編集ルートが 401 になることを検証する。
+func TestEdit_NoUserHeaderReturnsUnauthorized(t *testing.T) {
+	server := newTestServer(t)
+	defer server.Close()
+
+	assertStatus(t, doReq(t, server, http.MethodPost, "/docs/doc2/edit", ""), http.StatusUnauthorized)
+}
