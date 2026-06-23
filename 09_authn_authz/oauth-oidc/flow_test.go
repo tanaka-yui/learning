@@ -207,6 +207,7 @@ func TestRefreshTokenGrant(t *testing.T) {
 	form := url.Values{}
 	form.Set("grant_type", "refresh_token")
 	form.Set("refresh_token", rt)
+	form.Set("client_id", publicClientID)
 	resp, err := e.client.PostForm(e.issuer+"/token", form)
 	if err != nil {
 		t.Fatalf("refresh /token 失敗: %v", err)
@@ -219,6 +220,38 @@ func TestRefreshTokenGrant(t *testing.T) {
 	}
 	if refreshed["access_token"] == nil {
 		t.Error("リフレッシュ後の access_token がありません")
+	}
+}
+
+// TestRefreshTokenRejectsMismatchedClient はリフレッシュトークンを
+// 発行元と異なる client_id で使おうとした場合に拒否されることを確認する。
+func TestRefreshTokenRejectsMismatchedClient(t *testing.T) {
+	e := newTestEnv(t)
+	verifier := "refresh-mismatch-verifier-1234567890-abc"
+
+	code, _ := e.approveAndGetCode(t, e.defaultAuthParams(verifier, "s", "n"))
+	_, out := e.exchangeCode(t, code, verifier, publicClientID, e.issuer+"/app/callback")
+	rt, _ := out["refresh_token"].(string)
+	if rt == "" {
+		t.Fatal("refresh_token がありません")
+	}
+
+	form := url.Values{}
+	form.Set("grant_type", "refresh_token")
+	form.Set("refresh_token", rt)
+	form.Set("client_id", "different-client") // 発行元と異なる client_id
+	resp, err := e.client.PostForm(e.issuer+"/token", form)
+	if err != nil {
+		t.Fatalf("refresh /token 失敗: %v", err)
+	}
+	var respBody map[string]any
+	json.NewDecoder(resp.Body).Decode(&respBody)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("不一致 client_id の status = %d, want 400 (resp=%v)", resp.StatusCode, respBody)
+	}
+	if respBody["error"] != "invalid_grant" {
+		t.Errorf("error = %v, want invalid_grant", respBody["error"])
 	}
 }
 

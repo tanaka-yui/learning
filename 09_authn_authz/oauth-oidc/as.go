@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -244,6 +246,12 @@ func (a *AS) grantRefreshToken(w http.ResponseWriter, r *http.Request) {
 		tokenError(w, http.StatusBadRequest, "invalid_grant")
 		return
 	}
+	// リフレッシュトークンを発行したクライアントと、今リクエストしているクライアントが一致するか確認する。
+	// 不一致は token-theft の疑いがあるため invalid_grant で拒否する。
+	if r.FormValue("client_id") != rt.ClientID {
+		tokenError(w, http.StatusBadRequest, "invalid_grant")
+		return
+	}
 	access, err := a.keys.newAccessToken(a.issuer, rsAudience, rt.Sub, rt.ClientID, rt.Scope, accessTokenTTL)
 	if err != nil {
 		tokenError(w, http.StatusInternalServerError, "server_error")
@@ -263,7 +271,14 @@ func (a *AS) grantRefreshToken(w http.ResponseWriter, r *http.Request) {
 func (a *AS) grantClientCredentials(w http.ResponseWriter, r *http.Request) {
 	clientID, secret := clientCredentials(r)
 	client, ok := a.store.Client(clientID)
-	if !ok || !client.Confidential || client.Secret != secret {
+	if !ok || !client.Confidential {
+		tokenError(w, http.StatusUnauthorized, "invalid_client")
+		return
+	}
+	// タイミング攻撃でシークレットを推定されないよう、両辺を SHA-256 で固定長化した上で定時比較する。
+	wantHash := sha256.Sum256([]byte(client.Secret))
+	gotHash := sha256.Sum256([]byte(secret))
+	if subtle.ConstantTimeCompare(wantHash[:], gotHash[:]) != 1 {
 		tokenError(w, http.StatusUnauthorized, "invalid_client")
 		return
 	}
