@@ -14,7 +14,7 @@
 ## 前提条件
 
 - Docker / Docker Compose
-- (任意) Go 1.22+
+- (任意) Go 1.26+
 
 ## 使い方
 
