@@ -37,11 +37,14 @@ make help         # ヘルプ表示
 
 ## ドキュメント
 
+- [00 全体像・学習ガイド](docs/00_overview.md)
 - [01 セッション認証](docs/01_session.md)
 - [02 JWT](docs/02_jwt.md)
 - [03 OAuth 2.0](docs/03_oauth.md)
 - [04 OpenID Connect](docs/04_oidc.md)
+- [05 トークン運用の実務](docs/05_token_ops.md)
 - [06 パスワードレス / MFA](docs/06_passwordless_mfa.md)
 - [07 API / M2M 認証](docs/07_api_m2m.md)
-
-(00 全体像 / 05 トークン運用 / 08 IdP比較 / 09 認可フレームワーク / 10 認可設計 は順次追加)
+- [08 IdP比較(Auth0 / Cognito / Keycloak)](docs/08_idp_comparison.md)
+- [09 Go 認可フレームワーク比較](docs/09_authz_frameworks.md)
+- [10 認可の設計(RBAC / ABAC / ReBAC / PBAC)](docs/10_authz_design.md)
