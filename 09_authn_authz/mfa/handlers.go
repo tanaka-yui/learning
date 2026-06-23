@@ -231,13 +231,19 @@ func (a *app) handleMagicRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ユーザ列挙を避けるため、存在有無にかかわらず常に同じ応答を返す。
+	// トークン発行は同期的に行い、メール送信のみ非同期(ゴルーチン)にすることで
+	// ・ユーザ存在/非存在でレスポンス時間が変わらない(タイミングチャネルを閉じる)
+	// ・SMTP への同期ブロックがリクエスト処理をブロックしない
 	if ok {
 		t := a.magic.Issue(u.Username)
 		link := fmt.Sprintf("%s/magic/verify?token=%s", a.baseURL, t.Token)
-		// メール送信はベストエフォート。SMTPが届かなくてもトークン発行は成立させる。
-		if err := sendMagicLinkMail(a.mailHost, u.Email, link); err != nil {
-			log.Printf("マジックリンクのメール送信に失敗(トークンは発行済み): %v", err)
-		}
+		mailHost, email := a.mailHost, u.Email
+		go func() {
+			// メール送信はベストエフォート。SMTPが届かなくてもトークン発行は成立済み。
+			if err := sendMagicLinkMail(mailHost, email, link); err != nil {
+				log.Printf("マジックリンクのメール送信に失敗(トークンは発行済み): %v", err)
+			}
+		}()
 	}
 	writeJSON(w, http.StatusOK, map[string]string{
 		"status": "ok",
