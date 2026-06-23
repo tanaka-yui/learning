@@ -2,4 +2,11 @@ go 1.26
 
 toolchain go1.26.0
 
-use ./session
+use (
+	./session
+	./jwt
+	./oauth-oidc
+	./mfa
+	./api-m2m
+	./authz
+)

@@ -5,3 +5,58 @@ services:
       - "9000:8080"
     profiles:
       - session
+
+  jwt:
+    build: ./jwt
+    ports:
+      - "9001:8080"
+    profiles:
+      - jwt
+
+  oauth-oidc:
+    build: ./oauth-oidc
+    ports:
+      - "9100:8080"
+    environment:
+      ISSUER: "http://localhost:9100"
+    profiles:
+      - oauth-oidc
+
+  authz:
+    build: ./authz
+    ports:
+      - "9200:8080"
+    profiles:
+      - authz
+
+  mfa:
+    build: ./mfa
+    ports:
+      - "9300:8080"
+    environment:
+      MAILPIT_HOST: "mailpit:1025"
+    depends_on:
+      - mailpit
+    profiles:
+      - mfa
+
+  mailpit:
+    image: axllent/mailpit:v1.20
+    ports:
+      - "8025:8025"
+    environment:
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    profiles:
+      - mfa
+
+  api-m2m:
+    build: ./api-m2m
+    ports:
+      - "9400:8080"
+      - "9401:8443"
+    environment:
+      CERTS_DIR: "/certs"
+    volumes:
+      - ./api-m2m/certs:/certs:ro
+    profiles:
+      - api-m2m

@@ -1,2 +1,9 @@
-/certs/
+certs/
 *.out
+# go build artifacts (binary named after its dir, e.g. oauth-oidc/oauth-oidc)
+/jwt/jwt
+/oauth-oidc/oauth-oidc
+/mfa/mfa
+/api-m2m/api-m2m
+/authz/authz
+/session/session
