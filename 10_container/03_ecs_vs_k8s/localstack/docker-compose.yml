@@ -7,7 +7,8 @@ services:
     ports:
       - "4566:4566"
     environment:
-      SERVICES: ecs,ecr,iam,logs,cloudwatch,sts
+      # ECS and ECR require LocalStack Pro; see VERIFICATION.md for workaround.
+      SERVICES: iam,logs,cloudwatch,sts
       DEBUG: "0"
       DOCKER_HOST: unix:///var/run/docker.sock
     volumes:
