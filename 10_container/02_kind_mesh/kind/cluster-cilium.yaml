@@ -1,0 +1,9 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: learning-cilium
+networking:
+  disableDefaultCNI: true       # Cilium で置換
+  kubeProxyMode: none           # Cilium が代替
+nodes:
+- role: control-plane
+- role: worker
