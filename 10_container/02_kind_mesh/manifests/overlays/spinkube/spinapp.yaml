@@ -1,0 +1,9 @@
+apiVersion: core.spinkube.dev/v1alpha1
+kind: SpinApp
+metadata:
+  name: demo-spin
+  namespace: spinkube-app
+spec:
+  image: "localhost:5001/demo-spin:v1"
+  replicas: 2
+  executor: containerd-shim-spin
