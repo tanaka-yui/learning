@@ -1,0 +1,12 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: api-kata, namespace: kata-app }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: api, runtime: kata } }
+  template:
+    metadata: { labels: { app: api, runtime: kata } }
+    spec:
+      runtimeClassName: kata           # kata-deploy で導入される RuntimeClass
+      containers:
+      - { name: api, image: localhost:5001/demo-api:v1, ports: [{ containerPort: 8080 }] }
