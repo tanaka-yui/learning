@@ -1,0 +1,12 @@
+apiVersion: split.smi-spec.io/v1alpha2
+kind: TrafficSplit
+metadata:
+  name: api
+  namespace: linkerd-app
+spec:
+  service: api
+  backends:
+  - service: api-v1
+    weight: 90
+  - service: api-v2
+    weight: 10

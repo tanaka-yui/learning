@@ -1,0 +1,17 @@
+apiVersion: linkerd.io/v1alpha2
+kind: ServiceProfile
+metadata:
+  name: api.linkerd-app.svc.cluster.local
+  namespace: linkerd-app
+spec:
+  retryBudget:
+    retryRatio: 0.2
+    minRetriesPerSecond: 10
+    ttl: 10s
+  routes:
+  - name: echo
+    condition:
+      method: GET
+      pathRegex: "/api/v[12]/echo"
+    timeout: 2s
+    isRetryable: true
