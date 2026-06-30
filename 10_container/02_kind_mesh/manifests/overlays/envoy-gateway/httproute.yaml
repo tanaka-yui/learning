@@ -1,0 +1,9 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata: { name: api, namespace: envoy-gw-app }
+spec:
+  parentRefs: [{ name: api-gw }]
+  hostnames: ["gw.example"]
+  rules:
+  - matches: [{ path: { type: PathPrefix, value: /api } }]
+    backendRefs: [{ name: api, port: 80 }]
