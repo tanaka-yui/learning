@@ -1,0 +1,13 @@
+{
+  "name": "runtime-node-worker",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "test": "node --test worker/index.test.js",
+    "bundle": "esbuild worker/index.js --bundle --platform=node --target=node22 --outfile=dist/worker.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  },
+  "packageManager": "pnpm@10.33.1"
+}

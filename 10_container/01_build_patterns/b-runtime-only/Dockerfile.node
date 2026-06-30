@@ -1,0 +1,13 @@
+# syntax=docker/dockerfile:1.7
+FROM node:22-alpine AS build
+WORKDIR /src
+COPY package.json pnpm-lock.yaml* pnpm.yaml* pnpm-workspace.yaml* ./
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    corepack enable && pnpm install --frozen-lockfile
+COPY worker ./worker
+RUN pnpm exec esbuild worker/index.js --bundle --platform=node --target=node22 --outfile=/out/worker.js
+
+FROM gcr.io/distroless/nodejs22-debian12
+COPY --from=build /out/worker.js /app/worker.js
+USER 65532:65532
+ENTRYPOINT ["/nodejs/bin/node", "/app/worker.js"]
