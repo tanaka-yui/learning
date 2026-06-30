@@ -1,0 +1,13 @@
+spin_manifest_version = 2
+[application]
+name = "demo-spin"
+version = "0.1.0"
+
+[[trigger.http]]
+route = "/api/v1/echo"
+component = "demo-spin"
+
+[component.demo-spin]
+source = "target/wasm32-wasip1/release/demo_spin.wasm"
+[component.demo-spin.build]
+command = "cargo build --target wasm32-wasip1 --release"
