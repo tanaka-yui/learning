@@ -16,5 +16,6 @@ ENTRYPOINT ["/api"]
 
 FROM scratch AS scratch-final
 COPY --from=build /out/api /api
+USER 65532:65532
 EXPOSE 8080
 ENTRYPOINT ["/api"]
