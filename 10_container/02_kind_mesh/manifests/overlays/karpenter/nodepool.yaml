@@ -1,0 +1,32 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: kwok-default
+spec:
+  template:
+    metadata:
+      labels:
+        provisioner: kwok
+    spec:
+      requirements:
+      - key: kubernetes.io/os
+        operator: In
+        values: [linux]
+      - key: karpenter.sh/capacity-type
+        operator: In
+        values: [on-demand]
+      nodeClassRef:
+        group: karpenter.kwok.sh
+        kind: KWOKNodeClass
+        name: default
+  limits:
+    cpu: "100"
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: 30s
+---
+apiVersion: karpenter.kwok.sh/v1alpha1
+kind: KWOKNodeClass
+metadata:
+  name: default
+spec: {}
