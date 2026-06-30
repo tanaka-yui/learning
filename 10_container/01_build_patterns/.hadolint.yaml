@@ -1,0 +1,8 @@
+ignored:
+  # distroless images (gcr.io/distroless/*) use floating debian codename tags
+  # by design for security patching; digest-pinning is impractical in a
+  # learning context where images are rebuilt on demand.
+  - DL3006
+  # apt-get package versions change per mirror/snapshot; pinning specific
+  # versions is fragile in a learning image and adds maintenance burden.
+  - DL3008

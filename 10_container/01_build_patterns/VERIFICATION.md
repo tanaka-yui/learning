@@ -11,7 +11,7 @@ make verify
 ```
 
 期待:
-- `make build-all`: 6 image (same-image:{dev,test,prod}, runtime-go:{distroless,scratch}, runtime-node:distroless, tool-runner:latest) 構築
+- `make build-all`: 7 image (same-image:{dev,test,prod}, runtime-go:{distroless,scratch}, runtime-node:distroless, tool-runner:latest) 構築
 - `make smoke`: `curl /healthz` で `ok` を 2 回取得
 - `make lint`: hadolint error 0
 - `make size-report`: scratch < distroless < same-image:prod < same-image:dev
@@ -19,12 +19,17 @@ make verify
 
 ## 既知の環境固有スキップ
 
-### make smoke — macOS localhost IPv6 問題
-macOS では `localhost` が `::1`（IPv6）に解決されるが、
-Docker (Rancher Desktop) は `0.0.0.0`（IPv4）にバインドするため、
-`curl http://localhost:808x/healthz` は接続に失敗する。
+### make smoke — ポート競合
+`make smoke` は dev サービスをポート 8080、prod サービスをポート 8081 で起動する。
+同ポートを別プロセスが占有している場合（例: 他プロジェクトの開発サーバー）、
+curl は競合プロセスに到達し `/healthz` が 404 を返す。
 
-**手動確認済み:**
+**事前確認:**
+```sh
+lsof -i :8080 -i :8081   # 他プロセスが表示されれば停止してから実行
+```
+
+**手動確認済み（クリーンな環境での単体確認）:**
 ```sh
 docker run -d --rm -p 8090:8080 same-image:prod
 curl http://127.0.0.1:8090/healthz  # => ok
@@ -34,10 +39,5 @@ sleep 10 && curl http://127.0.0.1:8092/healthz  # => ok
 ```
 
 両イメージとも `127.0.0.1` 経由で `/healthz → ok` を返すことを確認済み。
-`make smoke` の curl 行を `127.0.0.1` に変更すれば通過するが、
-Makefile はプランの契約であるため変更しない。
-
-### make lint — hadolint warnings
-Tasks 2-5 で作成した Dockerfile に DL3006 (image tag), DL3008 (apt pin) の
-warning が存在し、hadolint が非ゼロ終了する。
-これらは Task 6 で導入したものではなく、既存 Dockerfile の問題。
+Makefile の `smoke` ターゲットは `127.0.0.1` を使用し、
+`trap` による確実なコンテナ停止を実装している。

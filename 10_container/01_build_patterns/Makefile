@@ -23,13 +23,11 @@ lint:
 
 smoke:
 	docker compose --profile dev up -d
-	sleep 3
-	curl -fsS http://localhost:8080/healthz
-	docker compose --profile dev down
+	@trap 'docker compose --profile dev down' EXIT; \
+	  sleep 3; curl -fsS http://127.0.0.1:8080/healthz
 	docker compose --profile prod up -d
-	sleep 2
-	curl -fsS http://localhost:8081/healthz
-	docker compose --profile prod down
+	@trap 'docker compose --profile prod down' EXIT; \
+	  sleep 2; curl -fsS http://127.0.0.1:8081/healthz
 
 verify: build-all smoke lint size-report
 	$(MAKE) -C c-tool-runner test
