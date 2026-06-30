@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - name: api
+        image: demo-api:v1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        env:
+        - name: APP_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: api-config
+              key: version
+        - name: RUNTIME
+          valueFrom:
+            configMapKeyRef:
+              name: api-config
+              key: runtime
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          periodSeconds: 2
