@@ -14,7 +14,9 @@ func TestEchoVersionFromEnv(t *testing.T) {
 		t.Fatalf("want 200, got %d", w.Code)
 	}
 	var got map[string]string
-	_ = json.NewDecoder(w.Result().Body).Decode(&got)
+	if err := json.NewDecoder(w.Result().Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
 	if got["version"] != "v9" {
 		t.Fatalf("want v9, got %s", got["version"])
 	}

@@ -121,10 +121,10 @@ admin=403
 **Mechanism:** Envoy Gateway `HTTPRoute` routes `host: gw.example` to the demo API.
 
 ```json
-{"version":"v1","hostname":"...","message":"hello"}
+{"host":"...","version":"v1"}
 ```
 
-HTTP 200, JSON body from the Go API.
+HTTP 200, JSON body from the Go API (`host` is the pod hostname, `version` is `APP_VERSION`).
 
 ---
 

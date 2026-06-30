@@ -1,4 +1,5 @@
-.PHONY: up down build push \
+.PHONY: up down build build-spin push \
+        install-gateway-api-crds \
         install-istio install-envoy-gw install-linkerd install-cilium \
         install-spinkube install-kata install-vcluster install-karpenter \
         demo-canary-sidecar demo-ambient demo-gateway demo-linkerd demo-l7-policy \
@@ -22,10 +23,18 @@ down:
 
 # ─── Image build & push ───────────────────────────────────────────────────────
 
-build:
+build: build-spin
 	docker build --build-arg APP_VERSION=v1 -t $(REGISTRY)/demo-api:v1 demo-app/api
 	docker build --build-arg APP_VERSION=v2 -t $(REGISTRY)/demo-api:v2 demo-app/api
 	docker build -t $(REGISTRY)/demo-web:latest demo-app/web
+
+build-spin:
+	@if ! command -v spin >/dev/null 2>&1; then \
+	  echo "WARNING: spin CLI not found — skipping Wasm image build"; \
+	  exit 0; \
+	else \
+	  cd demo-app/spin && spin build && spin registry push $(REGISTRY)/demo-spin:v1 --insecure; \
+	fi
 
 push:
 	docker push $(REGISTRY)/demo-api:v1
@@ -34,19 +43,22 @@ push:
 
 # ─── Overlay installs ─────────────────────────────────────────────────────────
 
-install-istio:
-	kubectl config use-context kind-learning-base
-	# Gateway API CRDs must exist before Istio ambient mode is installed.
-	# They are shared with Envoy Gateway (install-envoy-gw uses --skip-crds).
+# Gateway API CRDs are shared by Istio (install-istio) and Envoy Gateway
+# (install-envoy-gw). Installing them once here prevents server-side apply
+# conflicts. install-envoy-gw passes --skip-crds for the same reason.
+install-gateway-api-crds:
 	kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.1/standard-install.yaml
 	kubectl wait --for=condition=Established crd/gateways.gateway.networking.k8s.io --timeout=60s
+
+install-istio: install-gateway-api-crds
+	kubectl config use-context kind-learning-base
 	istioctl install --set profile=ambient -y
 	kubectl apply -k manifests/overlays/istio-sidecar
 	kubectl apply -k manifests/overlays/istio-ambient
 
-install-envoy-gw:
+install-envoy-gw: install-gateway-api-crds
 	kubectl config use-context kind-learning-base
-	# --skip-crds: Gateway API CRDs already applied by install-istio;
+	# --skip-crds: Gateway API CRDs already applied by install-gateway-api-crds;
 	# re-applying them causes server-side apply conflicts.
 	helm upgrade --install eg oci://docker.io/envoyproxy/gateway-helm \
 	  --version v1.2.0 -n envoy-gateway-system --create-namespace \
@@ -62,7 +74,8 @@ install-linkerd:
 	linkerd install | kubectl apply -f -
 	linkerd check
 	# SMI TrafficSplit CRD is no longer bundled with Linkerd edge builds.
-	kubectl apply -f https://raw.githubusercontent.com/servicemeshinterface/smi-sdk-go/main/crds/split.yaml
+	# Pinned to v0.5.0 (latest tagged release of smi-sdk-go) to avoid main-branch drift.
+	kubectl apply -f https://raw.githubusercontent.com/servicemeshinterface/smi-sdk-go/v0.5.0/crds/split.yaml
 	kubectl apply -k manifests/overlays/linkerd
 
 install-cilium:
@@ -81,8 +94,9 @@ install-spinkube:
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.15.0/cert-manager.yaml
 	kubectl wait --for=condition=Available deployment/cert-manager-webhook \
 	  -n cert-manager --timeout=120s
-	kubectl apply -f https://github.com/spinkube/spin-operator/releases/latest/download/spin-operator.runtime-class.yaml
-	kubectl apply -f https://github.com/spinkube/spin-operator/releases/latest/download/spin-operator.crds.yaml
+	# Pinned to v0.4.0 to match the helm chart version below.
+	kubectl apply -f https://github.com/spinkube/spin-operator/releases/download/v0.4.0/spin-operator.runtime-class.yaml
+	kubectl apply -f https://github.com/spinkube/spin-operator/releases/download/v0.4.0/spin-operator.crds.yaml
 	helm upgrade --install spin-operator --namespace spin-operator --create-namespace \
 	  --version 0.4.0 oci://ghcr.io/spinkube/charts/spin-operator
 	kubectl apply -k manifests/overlays/spinkube
