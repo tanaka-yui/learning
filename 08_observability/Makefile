@@ -11,7 +11,7 @@ demo:
 	  -d '{"item":"book","qty":1}' ; echo
 
 load:
-	@for i in $$(seq 1 50); do \
+	@for i in $$(seq 1 300); do \
 	  curl -s -o /dev/null -X POST http://localhost:9100/api/checkout \
 	    -H 'Content-Type: application/json' -d '{"item":"book","qty":1}' ; \
-	done ; echo "sent 50 requests"
+	done ; echo "sent 300 requests"

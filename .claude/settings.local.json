@@ -1,6 +1,9 @@
 {
   "permissions": {
-    "defaultMode": "bypassPermissions"
+    "defaultMode": "bypassPermissions",
+    "allow": [
+      "Bash(grep -nA8 'grafana:' docker-compose.yml)"
+    ]
   },
   "plansDirectory": ".claude/plans"
 }
