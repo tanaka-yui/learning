@@ -1,0 +1,23 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: api-l7
+  namespace: cilium-app
+spec:
+  endpointSelector:
+    matchLabels:
+      app: api
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app: web
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+      rules:
+        http:
+        - method: GET
+          path: "/api/v[12]/echo"
+        - method: GET
+          path: "/healthz"
