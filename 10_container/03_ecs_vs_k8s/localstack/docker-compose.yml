@@ -1,0 +1,25 @@
+services:
+  localstack:
+    # NOTE: ECR/ECS are LocalStack Pro features (not available in community edition).
+    # Using localstack:3 for IAM/CloudWatch/STS/logs emulation.
+    # Container registry provided by registry:2 below (see ECR_REGISTRY workaround in seed.sh).
+    image: localstack/localstack:3
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: ecs,ecr,iam,logs,cloudwatch,sts
+      DEBUG: "0"
+      DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "localstack-data:/var/lib/localstack"
+
+  # ECR workaround: LocalStack community does not emulate ECR.
+  # registry:2 provides a Docker-registry-v2 endpoint at localhost:5000.
+  registry:
+    image: registry:2
+    ports:
+      - "5000:5000"
+
+volumes:
+  localstack-data: {}
