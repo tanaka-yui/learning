@@ -1,0 +1,21 @@
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata: { name: api-gw }
+spec:
+  selector: { istio: ingressgateway }
+  servers:
+  - port: { number: 80, name: http, protocol: HTTP }
+    hosts: ["sidecar.example"]
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata: { name: api-ext }
+spec:
+  hosts: ["sidecar.example"]
+  gateways: ["api-gw"]
+  http:
+  - route:
+    - destination: { host: api, subset: v1 }
+      weight: 90
+    - destination: { host: api, subset: v2 }
+      weight: 10

@@ -1,0 +1,11 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata: { name: api }
+spec:
+  hosts: ["api"]
+  http:
+  - route:
+    - destination: { host: api, subset: v1 }
+      weight: 90
+    - destination: { host: api, subset: v2 }
+      weight: 10

@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: istio-sidecar-app
+resources:
+  - namespace.yaml
+  - ../../base
+  - virtualservice.yaml
+  - destinationrule.yaml
+  - peerauth.yaml
+  - gateway.yaml
