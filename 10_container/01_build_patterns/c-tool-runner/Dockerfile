@@ -22,4 +22,9 @@ COPY --from=hadolint /bin/hadolint             /usr/local/bin/hadolint
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 WORKDIR /work
+# Run as non-root for consistency with distroless patterns A/B.
+# NOTE: when volume-mounting local dirs (docker run -v "$PWD":/work), files
+# written inside /work will be owned by UID 65532. Ensure the host directory
+# is world-writable or owned by UID 65532, otherwise writes will fail.
+USER 65532:65532
 ENTRYPOINT ["/entrypoint.sh"]
