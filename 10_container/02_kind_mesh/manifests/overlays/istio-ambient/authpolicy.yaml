@@ -1,0 +1,8 @@
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: { name: deny-admin, namespace: istio-ambient-app }
+spec:
+  targetRefs: [{ kind: Service, group: "", name: api }]
+  action: DENY
+  rules:
+  - to: [{ operation: { paths: ["/admin/*"] } }]
