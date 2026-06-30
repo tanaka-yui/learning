@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-v2
+  labels:
+    app: api
+    version: v2
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: api
+        version: v2
+    spec:
+      containers:
+      - name: api
+        image: localhost:5001/demo-api:v2
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          periodSeconds: 2
