@@ -1,0 +1,5 @@
+sync:
+  toHost:
+    ingresses: { enabled: false }
+controlPlane:
+  service: { spec: { type: ClusterIP } }
