@@ -1,0 +1,7 @@
+# Prometheus Operator が入っていない環境では kubeconform で "no schema" warn になる
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata: { name: api }
+spec:
+  selector: { matchLabels: { app: api } }
+  endpoints: [{ port: http, interval: 15s }]
