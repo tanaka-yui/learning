@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata: { name: demo, namespace: argocd }
+spec:
+  generators:
+  - list:
+      elements:
+      - { env: dev,  replicas: "1" }
+      - { env: stg,  replicas: "2" }
+      - { env: prod, replicas: "3" }
+  template:
+    metadata: { name: 'demo-{{env}}' }
+    spec:
+      project: demo
+      source:
+        repoURL: https://github.com/tanaka-yui/learning.git
+        targetRevision: HEAD
+        path: '10_container/04_gitops_argo/envs/{{env}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'demo-{{env}}'
+      syncPolicy:
+        automated: { prune: true, selfHeal: true }
+        syncOptions: [CreateNamespace=true]

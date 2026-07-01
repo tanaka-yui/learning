@@ -1,0 +1,15 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata: { name: demo-stg-standalone, namespace: argocd }
+spec:
+  project: demo
+  source:
+    repoURL: https://github.com/tanaka-yui/learning.git
+    targetRevision: HEAD
+    path: 10_container/04_gitops_argo/envs/stg
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: demo-stg
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true]

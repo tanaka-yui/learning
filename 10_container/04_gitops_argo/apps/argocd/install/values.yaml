@@ -1,0 +1,13 @@
+# minimal kind-friendly Argo CD Helm values
+configs:
+  params:
+    server.insecure: "true"
+server:
+  service:
+    type: NodePort
+crds:
+  install: true
+notifications:
+  enabled: false
+dex:
+  enabled: false
