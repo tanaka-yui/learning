@@ -196,36 +196,30 @@ make helm-diff
 
 ## 既知の制限事項
 
-### kustomize-apply-dev — ServiceMonitor CRD 未インストール
+### kustomize-apply-dev — ServiceMonitor CRD
 
-bare kind クラスターには prometheus-operator CRDs が含まれないため、
-`kustomize-apply-dev` は以下のエラーで失敗する:
+bare kind クラスターには prometheus-operator CRDs が含まれないが、
+`make verify` は `kustomize-apply-dev` の前に `install-servicemonitor-crd` を
+自動実行するため手動対応は不要になった。
 
-```
-error: resource mapping not found for name: "dev-api" namespace: "demo-dev"
-from "kustomize/overlays/dev": no matches for kind "ServiceMonitor"
-in version "monitoring.coreos.com/v1"
-ensure CRDs are installed first
-```
-
-**回避策 A: prometheus-operator CRD を先にインストール**
+手動で apply する場合も `make install-servicemonitor-crd` を先に実行すればよい:
 
 ```sh
-kubectl --context kind-learning-manifest apply \
-  --server-side \
-  -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml
+make install-servicemonitor-crd
 make kustomize-apply-dev
 ```
 
-**回避策 B: metrics component を除いて apply (学習目的)**
+### Helm ライブラリチャートの更新
+
+`helm/charts/demo-api/` が依存するライブラリチャートを変更した場合は、
+`helm dependency update` を再実行して `Chart.lock` を更新すること:
 
 ```sh
-kubectl --context kind-learning-manifest apply -k kustomize/base
-kubectl --context kind-learning-manifest -n demo-dev wait --for=condition=Available deploy --all --timeout=120s
+helm dependency update helm/charts/demo-api/
 ```
 
-`make verify` のうち render / lint / helm template / `make compare` はすべて
-exit 0 で完了する。apply ステップのみ上記 CRD 制約がある。
+生成される `.tgz` は `helm/charts/demo-api/charts/.gitignore` により
+以降のコミットから除外される (初回コミット済みの `common-0.1.0.tgz` はそのまま残す)。
 
 ---
 

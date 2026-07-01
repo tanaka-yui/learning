@@ -1,3 +1,8 @@
+{{/*
+  Note: this ConfigMap is rendered for parity with the Kustomize base
+  (which uses configMapKeyRef), but the Helm Deployment inlines env
+  values directly via .Values.env for simplicity. See docs/compare.md.
+*/}}
 apiVersion: v1
 kind: ConfigMap
 metadata:

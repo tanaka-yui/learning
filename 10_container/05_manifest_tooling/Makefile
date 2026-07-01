@@ -1,5 +1,6 @@
 .PHONY: kustomize-render-dev kustomize-render-stg kustomize-render-prod \
         kustomize-apply-dev kustomize-diff \
+        install-servicemonitor-crd \
         helm-lint helm-template-dev helm-template-stg helm-template-prod \
         helm-install-dev helm-test helm-diff \
         compare verify down
@@ -16,6 +17,10 @@ kustomize-render-prod: ; kubectl kustomize kustomize/overlays/prod
 kustomize-apply-dev:
 	kubectl --context $(CTX) apply -k kustomize/overlays/dev
 	kubectl --context $(CTX) -n demo-dev wait --for=condition=Available deploy --all --timeout=120s
+
+install-servicemonitor-crd:
+	kubectl --context $(CTX) apply --server-side \
+	  -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.79.2/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml
 
 kustomize-diff:
 	@echo "=== dev vs prod (kustomize) ==="
@@ -69,6 +74,7 @@ verify:
 	$(MAKE) helm-template-stg  > /dev/null && echo "  stg OK"
 	$(MAKE) helm-template-prod > /dev/null && echo "  prod OK"
 	@echo "=== Apply dev via both ==="
+	$(MAKE) install-servicemonitor-crd
 	$(MAKE) kustomize-apply-dev
 	$(MAKE) helm-install-dev
 	@echo "=== Helm test ==="
