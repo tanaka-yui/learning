@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata: { name: webhook-to-workflow, namespace: argo-events }
+spec:
+  template:
+    serviceAccountName: operate-workflow-sa
+  dependencies:
+  - name: webhook-dep
+    eventSourceName: webhook
+    eventName: example
+  triggers:
+  - template:
+      name: submit-workflow
+      k8s:
+        operation: create
+        source:
+          resource:
+            apiVersion: argoproj.io/v1alpha1
+            kind: Workflow
+            metadata: { generateName: event-triggered-, namespace: argo }
+            spec:
+              entrypoint: main
+              templates:
+              - name: main
+                container:
+                  image: alpine:3.20
+                  command: [sh, -c, "echo triggered by event"]
