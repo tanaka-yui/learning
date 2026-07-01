@@ -1,0 +1,2 @@
+replicas: 1
+env: { APP_VERSION: v1-dev, RUNTIME: k8s }

@@ -1,0 +1,13 @@
+replicas: 3
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+  - host: api.example
+    paths: [{ path: /api, pathType: Prefix }]
+hpa:
+  enabled: true
+  min: 2
+  max: 6
+  cpuTarget: 50
+env: { APP_VERSION: v1-prod, RUNTIME: k8s }
