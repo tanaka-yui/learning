@@ -1,0 +1,4 @@
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: api-config }
+data: { version: "v1", runtime: "k8s" }
