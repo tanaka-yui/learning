@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "demo-api.fullname" . }}-test"
+  labels: {{- include "common.labels" . | nindent 4 }}
+  annotations: { "helm.sh/hook": test }
+spec:
+  containers:
+  - name: curl
+    image: curlimages/curl:8.9.0
+    args: ["curl", "-fsS", "http://{{ include "demo-api.fullname" . }}:{{ .Values.service.port }}/healthz"]
+  restartPolicy: Never

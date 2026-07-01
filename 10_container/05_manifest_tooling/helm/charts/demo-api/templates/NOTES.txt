@@ -1,0 +1,14 @@
+demo-api chart {{ .Chart.Version }} installed as {{ .Release.Name }}.
+
+Endpoints:
+  - Service: {{ include "demo-api.fullname" . }}
+  - Port: {{ .Values.service.port }}
+{{- if .Values.ingress.enabled }}
+  - Ingress hosts:
+{{- range .Values.ingress.hosts }}
+    - http://{{ .host }}{{ (index .paths 0).path }}
+{{- end }}
+{{- end }}
+
+Test:
+  helm test {{ .Release.Name }}

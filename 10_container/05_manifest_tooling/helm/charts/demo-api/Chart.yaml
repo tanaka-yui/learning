@@ -1,0 +1,10 @@
+apiVersion: v2
+name: demo-api
+version: 0.1.0
+appVersion: v1
+description: Demo Go API for chapter 10-5 Helm learning
+type: application
+dependencies:
+- name: common
+  version: 0.1.0
+  repository: file://../../library-chart/charts/common
