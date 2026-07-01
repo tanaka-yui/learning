@@ -1,0 +1,10 @@
+# 旧 API (v1alpha1 RunnerDeployment) は非推奨。ここでは AutoscalingRunnerSet への移行前の参考として残す。
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata: { name: legacy-runner, namespace: arc-runners }
+spec:
+  replicas: 1
+  template:
+    spec:
+      repository: tanaka-yui/learning
+      labels: [self-hosted, kind-legacy]

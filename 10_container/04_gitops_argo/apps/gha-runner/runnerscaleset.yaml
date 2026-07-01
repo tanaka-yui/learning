@@ -1,0 +1,13 @@
+apiVersion: actions.github.com/v1alpha1
+kind: AutoscalingRunnerSet
+metadata: { name: k8s-runners, namespace: arc-runners }
+spec:
+  githubConfigUrl: https://github.com/tanaka-yui/learning       # ユーザ実 repo に変更
+  githubConfigSecret: gh-config                                  # kubectl create secret generic ...
+  maxRunners: 3
+  minRunners: 0
+  containerMode: { type: kubernetes }
+  template:
+    spec:
+      containers:
+      - { name: runner, image: ghcr.io/actions/actions-runner:latest, command: ["/home/runner/run.sh"] }
