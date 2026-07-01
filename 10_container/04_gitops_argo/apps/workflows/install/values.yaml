@@ -1,0 +1,7 @@
+server:
+  authMode: server
+  serviceType: ClusterIP
+controller:
+  workflowNamespaces: [argo, demo-dev, demo-stg, demo-prod]
+workflow:
+  serviceAccount: { create: true, name: argo }

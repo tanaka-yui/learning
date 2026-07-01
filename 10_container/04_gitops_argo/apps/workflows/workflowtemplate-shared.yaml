@@ -1,0 +1,13 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata: { name: shared, namespace: argo }
+spec:
+  entrypoint: noop
+  templates:
+  - name: noop
+    container: { image: alpine:3.20, command: [sh, -c, "echo shared-template ok"] }
+  - name: git-echo
+    inputs: { parameters: [{ name: msg }] }
+    container:
+      image: alpine:3.20
+      command: [sh, -c, "echo '{{inputs.parameters.msg}}'"]

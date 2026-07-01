@@ -1,0 +1,13 @@
+apiVersion: argoproj.io/v1alpha1
+kind: CronWorkflow
+metadata: { name: drift-report, namespace: argo }
+spec:
+  schedule: "0 * * * *"
+  concurrencyPolicy: Forbid
+  workflowSpec:
+    entrypoint: main
+    templates:
+    - name: main
+      container:
+        image: quay.io/argoproj/argocd:v2.13.0
+        command: [sh, -c, "echo 'argocd app diff demo-dev (stub)'"]

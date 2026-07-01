@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata: { generateName: ci-build-promote-, namespace: argo }
+spec:
+  entrypoint: main
+  templates:
+  - name: main
+    dag:
+      tasks:
+      - name: git-clone
+        template: echo
+        arguments: { parameters: [{ name: msg, value: "git clone (stub)" }] }
+      - name: build
+        dependencies: [git-clone]
+        template: echo
+        arguments: { parameters: [{ name: msg, value: "buildkit build (stub)" }] }
+      - name: scan
+        dependencies: [build]
+        template: echo
+        arguments: { parameters: [{ name: msg, value: "trivy scan (stub)" }] }
+      - name: promote
+        dependencies: [scan]
+        template: echo
+        arguments: { parameters: [{ name: msg, value: "git commit envs/dev/patch-image.yaml (stub)" }] }
+  - name: echo
+    inputs: { parameters: [{ name: msg }] }
+    container:
+      image: alpine:3.20
+      command: [sh, -c, "echo '{{inputs.parameters.msg}}'"]
