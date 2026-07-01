@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata: { name: pod-ready, namespace: demo-prod }
+spec:
+  metrics:
+  - name: ready-pods
+    interval: 10s
+    count: 3
+    successCondition: result >= 2
+    failureLimit: 2
+    provider:
+      job:
+        spec:
+          template:
+            spec:
+              containers:
+              - name: kubectl
+                image: bitnami/kubectl:1.31
+                command:
+                - sh
+                - -c
+                - |
+                  READY=$(kubectl -n demo-prod get pods -l app=api -o json | \
+                    jq '[.items[] | select(.status.conditions[]? | select(.type=="Ready" and .status=="True"))] | length')
+                  echo "result: $READY"
+              restartPolicy: Never

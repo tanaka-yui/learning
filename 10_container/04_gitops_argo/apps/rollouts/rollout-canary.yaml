@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata: { name: api, namespace: demo-prod }
+spec:
+  replicas: 3
+  selector: { matchLabels: { app: api } }
+  template:
+    metadata: { labels: { app: api } }
+    spec:
+      containers:
+      - name: api
+        image: localhost:5001/demo-api:v1
+        ports: [{ containerPort: 8080 }]
+        readinessProbe: { httpGet: { path: /healthz, port: 8080 }, periodSeconds: 2 }
+  strategy:
+    canary:
+      steps:
+      - setWeight: 20
+      - pause: { duration: 30s }
+      - setWeight: 50
+      - analysis:
+          templates: [{ templateName: pod-ready }]
+      - setWeight: 100
