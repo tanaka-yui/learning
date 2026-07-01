@@ -30,6 +30,14 @@ spec:
         spec: ...
 ```
 
+> **Warning: `job` プロバイダーの成否判定は exit code のみ**
+> `successCondition` は `job` プロバイダーでは評価されない。
+> Argo Rollouts の `job` プロバイダーはコンテナの exit code だけを見て成否を判定する
+> (exit 0 → success, exit 非 0 → failure)。`successCondition: result >= 2` のような
+> 式は Prometheus / Web などのプロバイダー向けのものであり、`job` プロバイダーでは
+> ドキュメント目的にしかならない。Job コンテナ側で条件チェックを行い、
+> 失敗時に `exit 1` を明示的に返すこと。
+
 ### AnalysisRun
 
 AnalysisTemplate のインスタンス。Rollout の `analysis` ステップで自動生成される。
