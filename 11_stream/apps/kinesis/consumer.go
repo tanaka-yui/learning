@@ -35,7 +35,7 @@ func runConsume(args []string) error {
 		ShardIteratorType: types.ShardIteratorType(*iterType),
 	})
 	if err != nil {
-		return err
+		return connectHint(err)
 	}
 
 	iter := itOut.ShardIterator
