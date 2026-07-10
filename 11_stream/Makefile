@@ -54,3 +54,9 @@ demo-kafka-replay:
 demo-kinesis:
 	go run ./apps/kinesis produce -n 5
 	go run ./apps/kinesis consume -iterator TRIM_HORIZON -max 5
+
+.PHONY: verify
+
+# 直列実行前提（-j 不可）。demo-kafka-replay は demo-kafka が先に produce している事に依存する
+verify: up demo-sqs demo-sqs-dlq demo-activemq demo-activemq-topic demo-kafka demo-kafka-replay demo-kinesis
+	@echo "ALL DEMOS PASSED"
