@@ -37,3 +37,14 @@ demo-activemq-topic:
 	go run ./apps/activemq produce --topic -n 3; \
 	wait $$C1; S1=$$?; wait $$C2; S2=$$?; \
 	[ $$S1 -eq 0 ] && [ $$S2 -eq 0 ]
+
+.PHONY: demo-kafka demo-kafka-replay
+
+demo-kafka:
+	go run ./apps/kafka produce -n 5
+	go run ./apps/kafka consume -group demo -max 5
+
+# 新しい group 名 + --from-beginning = 再 produce せずに過去レコードを再消費（replay）
+# group 名にタイムスタンプを入れて毎回「初見の group」にする
+demo-kafka-replay:
+	go run ./apps/kafka consume -group replay-$$(date +%s) --from-beginning -max 5

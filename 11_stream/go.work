@@ -4,5 +4,6 @@ toolchain go1.26.0
 
 use (
 	./apps/activemq
+	./apps/kafka
 	./apps/sqs
 )
