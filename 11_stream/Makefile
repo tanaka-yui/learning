@@ -48,3 +48,9 @@ demo-kafka:
 # group 名にタイムスタンプと PID を入れて毎回「初見の group」にする（秒内衝突回避）
 demo-kafka-replay:
 	go run ./apps/kafka consume -group replay-$$(date +%s)-$$$$ --from-beginning -max 5
+
+.PHONY: demo-kinesis
+
+demo-kinesis:
+	go run ./apps/kinesis produce -n 5
+	go run ./apps/kinesis consume -iterator TRIM_HORIZON -max 5
