@@ -49,7 +49,7 @@ func runConsume(args []string) error {
 					QueueUrl:      urlOut.QueueUrl,
 					ReceiptHandle: m.ReceiptHandle,
 				}); err != nil {
-					return err
+					return connectHint(err)
 				}
 			}
 		}
