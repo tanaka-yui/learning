@@ -45,6 +45,6 @@ demo-kafka:
 	go run ./apps/kafka consume -group demo -max 5
 
 # 新しい group 名 + --from-beginning = 再 produce せずに過去レコードを再消費（replay）
-# group 名にタイムスタンプを入れて毎回「初見の group」にする
+# group 名にタイムスタンプと PID を入れて毎回「初見の group」にする（秒内衝突回避）
 demo-kafka-replay:
-	go run ./apps/kafka consume -group replay-$$(date +%s) --from-beginning -max 5
+	go run ./apps/kafka consume -group replay-$$(date +%s)-$$$$ --from-beginning -max 5
