@@ -79,7 +79,7 @@ awslocal sqs create-queue --queue-name orders --attributes "{
   \"RedrivePolicy\": \"{\\\"deadLetterTargetArn\\\":\\\"${DLQ_ARN}\\\",\\\"maxReceiveCount\\\":\\\"2\\\"}\"
 }"
 ```
-（[localstack-init/init-aws.sh:10](../localstack-init/init-aws.sh#L10)-[12](../localstack-init/init-aws.sh#L12)）
+（[localstack-init/init-aws.sh:10](../localstack-init/init-aws.sh#L10)-[13](../localstack-init/init-aws.sh#L13)）
 
 `maxReceiveCount=2` は「このメッセージの受信回数（`ApproximateReceiveCount`）が 2 を超えたら、本体キューへは配信せず DLQ (`orders-dlq`) へ移送する」という意味である。`make demo-sqs-dlq` はこれを実際に発生させるシナリオで、実行すると次の出力が得られる（実測、[Makefile:16](../Makefile#L16)-[23](../Makefile#L23)）。
 
