@@ -35,4 +35,5 @@ demo-activemq-topic:
 	go run ./apps/activemq consume --topic -max 3 & C2=$$!; \
 	sleep 2; \
 	go run ./apps/activemq produce --topic -n 3; \
-	wait $$C1 && wait $$C2
+	wait $$C1; S1=$$?; wait $$C2; S2=$$?; \
+	[ $$S1 -eq 0 ] && [ $$S2 -eq 0 ]
