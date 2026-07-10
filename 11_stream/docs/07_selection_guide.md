@@ -44,7 +44,7 @@
 | データモデル | queue（配って消す） | queue + topic | stream（追記ログ） | stream（追記ログ） | stream 配送（通過点） |
 | 順序保証 | standard 無 / FIFO は group 単位 | 単一consumerなら送信順 | partition(key)単位 | shard(partition key)単位 | 保証しない（配送のみ） |
 | リプレイ | 不可 | 不可 | 可（offset 巻き戻し） | 可（保持期間内 iterator） | 不可（保持しない） |
-| fan-out 方式 | 単体では不可（+SNS） | topic 購読（接続中のみ） | consumer group を分ける | shard を複数 group が読む | 不可（1宛先へ配送） |
+| fan-out 方式 | 単体では不可（+SNS） | topic 購読（接続中のみ） | consumer group を分ける | shard を複数のコンシューマ（アプリ）が独立に読む（専用帯域は Enhanced Fan-Out） | 不可（1宛先へ配送） |
 | 保持期間 | 最大 14 日（消費で消滅） | 消費で消滅（永続はディスク次第） | retention 設定（実質無制限可） | 24h 既定〜365d | 保持しない |
 | スループット上限 | 実質無制限（AWS がスケール） | 単一ブローカーの CPU/IO に律速 | broker 増設でスケール | shard 数ぶん（1MB/s・1000rec/s per shard） | 自動スケール |
 | 運用負荷 | ほぼゼロ（フルマネージド） | 高（自前運用）/中（Amazon MQ） | 高（rebalance・retention 容量管理） | 中（shard/reshard・KCL） | ほぼゼロ（宛先設定のみ） |
@@ -62,9 +62,9 @@
 | サービス | 課金軸 | 月額の式 |
 |---|---|---|
 | SQS standard | リクエスト数 | (send + receive + delete のリクエスト数 ÷ 100万) × 単価 ※ペイロード 64KB ごとに 1 リクエスト単位 |
-| Amazon MQ | ブローカー常駐時間 | インスタンス時間 × 730h × 単価 + ストレージ(GB-月) |
+| Amazon MQ | ブローカー常駐時間 | インスタンス数 × 730h × 単価 + ストレージ(GB-月) |
 | KDS プロビジョンド | shard 時間 + PUT | shard 数 × 730h × 単価 + PUT ペイロードユニット(25KB)数 × 単価 |
-| KDS オンデマンド | データ量 | ストリーム時間 × 730h × 単価 + 取込 GB × 単価 + 読出 GB × 単価 |
+| KDS オンデマンド | データ量 | ストリーム数 × 730h × 単価 + 取込 GB × 単価 + 読出 GB × 単価 |
 | Firehose | 取込データ量 | 取込 GB × 単価 ※レコードは 5KB に切り上げて課金 |
 | MSK | broker 常駐時間 | broker 数 × 730h × 単価 + ストレージ(GB-月) |
 
@@ -171,7 +171,7 @@
 
 したがって Firehose → KDS の乗り換えは料金クロスではなく **要件クロス**で起きる:
 - **秒未満のレイテンシが要る**: Firehose はバッファ時間ぶんの near-real-time が原理的な下限（`06_firehose.md` セクション 2）。不正検知の即時発火などには KDS。
-- **消費系が 2 つ以上になった**: Firehose は 1 宛先へ配送するだけ。複数系が独立に読む／リプレイするなら KDS の shard を複数 group で読む。
+- **消費系が 2 つ以上になった**: Firehose は 1 宛先へ配送するだけ。複数系が独立に読む／リプレイするなら KDS の shard を複数のコンシューマで読む。
 - **変換が Lambda で収まらない**: Firehose の加工は Lambda 変換・フォーマット変換・動的パーティショニングの枠（`06_firehose.md` セクション 4）。それを超える処理は自前コンシューマ＝KDS。
 - **小レコードで取込量が膨らんだ**: 上記の 5KB 切り上げで Firehose の請求が跳ねる場合、料金面からも KDS が正当化される。
 
@@ -220,7 +220,7 @@ SQS は queue なので本来「消して終わり」のジョブ配布向きだ
 
 本章は 5 サービスに絞ったが、実務で隣接して名前が挙がる 3 つに一言ずつ触れておく。いずれも本ハンズオンの対象外である。
 
-- **RabbitMQ**: AMQP を中心とした broker 型 MQ で、ActiveMQ と同じ「自前 or Amazon MQ でマネージド」の queue 系列に入る。柔軟な routing（exchange/binding）が強みで、ActiveMQ の代替として Amazon MQ が RabbitMQ エンジンも提供する（セクション 3 の単価表にも RabbitMQ 行が存在する）。選定軸は ActiveMQ とほぼ同じ「標準プロトコル・topic/routing・セルフ運用可搬性」なので、本章の queue 側の議論がそのまま応用できる。
+- **RabbitMQ**: AMQP を中心とした broker 型 MQ で、ActiveMQ と同じ「自前 or Amazon MQ でマネージド」の queue 系列に入る。柔軟な routing（exchange/binding）が強みで、ActiveMQ の代替として Amazon MQ が RabbitMQ エンジンも提供する（Amazon MQ の公式料金ページには RabbitMQ エンジンの単価も掲載されている）。選定軸は ActiveMQ とほぼ同じ「標準プロトコル・topic/routing・セルフ運用可搬性」なので、本章の queue 側の議論がそのまま応用できる。
 - **SNS（Simple Notification Service）**: pub/sub 型の**通知**サービスで、それ自体は保持もリプレイもしない。SQS が単体で持てない fan-out を補うために「SNS → 複数 SQS」の組み合わせ（fan-out パターン）で頻出する。本章の「fan-out が要るなら stream」という結論に対する、queue 側での fan-out の実装手段として位置づけられる。
 - **EventBridge**: イベントの内容でルーティングする**イベントバス**で、多数の AWS サービスや SaaS を疎に繋ぐ用途に向く。ルールベースのフィルタリングとターゲット振り分けが主眼で、高スループットの生ストリーム処理（KDS/Kafka の領域）とは狙いが異なる。「マイクロサービス間をイベントで疎結合したい」という `01_concepts.md` セクション 2 のイベント駆動の目的に、本章のストリームとは別のアプローチで応えるサービスである。
 

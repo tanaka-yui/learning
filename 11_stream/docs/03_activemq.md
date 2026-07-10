@@ -8,7 +8,7 @@
 
 SQS は API を叩くだけで、こちらが管理するプロセスは 1 つもなかった。ActiveMQ はその対極にある。JMS（Java Message Service）に由来するブローカー常駐型の MQ であり、`apache/activemq-classic` イメージのプロセスを自分で起動し、生死・ポート・認証情報まで自分で面倒を見る（[docker-compose.yml:11](../docker-compose.yml#L11)-[18](../docker-compose.yml#L18)）。本ハンズオンの compose はこのブローカーの STOMP ポート `61613` と管理 Web UI ポート `8161` の 2 つだけをホストに公開している（[docker-compose.yml:14](../docker-compose.yml#L14)-[15](../docker-compose.yml#L15)）。
 
-SQS との一番わかりやすい違いは、ブローカーの中身が「見える」ことである。`http://localhost:8161` の管理 UI に `admin`/`admin`（[docker-compose.yml:17](../docker-compose.yml#L17)-[18](../docker-compose.yml#L18)で設定した資格情報）でログインすると、キューごとの滞留数・消費速度・接続中のコンシューマ数がダッシュボードとして見える。SQS では CloudWatch メトリクスやポーリングでしか窺えなかった「今キューに何通溜まっているか」が、ブローカーを自分で持つことの直接的な見返りとして UI 上に現れる。この代わりに、ブローカーの可用性・スケール・パッチ適用は AWS ではなく利用者自身の責任になる。
+SQS との一番わかりやすい違いは、ブローカーの中身が「見える」ことである。`http://localhost:8161` の管理 UI に `admin`/`admin`（これはイメージ既定の資格情報であり、[docker-compose.yml:17](../docker-compose.yml#L17)-[18](../docker-compose.yml#L18)の `ACTIVEMQ_CONNECTION_USER`/`PASSWORD` はブローカー接続〈STOMP 等〉用の資格情報で、値がたまたま一致しているだけである）でログインすると、キューごとの滞留数・消費速度・接続中のコンシューマ数がダッシュボードとして見える。SQS では CloudWatch メトリクスやポーリングでしか窺えなかった「今キューに何通溜まっているか」が、ブローカーを自分で持つことの直接的な見返りとして UI 上に現れる。この代わりに、ブローカーの可用性・スケール・パッチ適用は AWS ではなく利用者自身の責任になる。
 
 なお `apache/activemq-classic` のコンテナはイメージとして STOMP（61613）・管理 UI（8161）以外にも OpenWire（61616）・AMQP（5672）・MQTT（1883）・JMX（1099）のポートを内部で公開しているが、本 compose では STOMP と管理 UI 以外は外部に出していない。この「1 つのブローカーが複数プロトコルの入口を持つ」という性質はセクション 3 で扱う。
 
